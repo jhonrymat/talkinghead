@@ -13,6 +13,8 @@
       "imports": {
         "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js/+esm",
         "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+        "dompurify": "https://cdn.jsdelivr.net/npm/dompurify@3.1.7/+esm",
+        "marked": "https://cdn.jsdelivr.net/npm/marked@14.1.3/+esm",
         "talkinghead": "../modules/talkinghead.mjs"
       }
     }    
@@ -22,29 +24,742 @@
         src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
 
 
-    <script type="module" src="./js/talkinghead-app.js"></script>
-    <script type="script" src="./js/chat.js"></script>
+    <script type="module">
+        import { TalkingHead } from "talkinghead";
+        import dompurify from 'dompurify';
+        import { marked } from 'marked';
+
+        // Markdown configuration
+        const markedOptions = { gfm: true, breaks: true };
+
+        const visemeMap = [
+      /* 0  */ "sil",            // Silence
+      /* 1  */ "aa",             // æ, ə, ʌ
+      /* 2  */ "aa",             // ɑ
+      /* 3  */ "O",              // ɔ
+      /* 4  */ "E",              // ɛ, ʊ
+      /* 5  */ "RR",              // ɝ
+      /* 6  */ "I",              // j, i, ɪ
+      /* 7  */ "U",              // w, u
+      /* 8  */ "O",              // o
+      /* 9  */ "O",             // aʊ
+      /* 10 */ "O",              // ɔɪ
+      /* 11 */ "I",              // aɪ
+      /* 12 */ "kk",             // h
+      /* 13 */ "RR",             // ɹ
+      /* 14 */ "nn",             // l
+      /* 15 */ "SS",             // s, z
+      /* 16 */ "CH",             // ʃ, tʃ, dʒ, ʒ
+      /* 17 */ "TH",             // ð
+      /* 18 */ "FF",             // f, v
+      /* 19 */ "DD",             // d, t, n, θ
+      /* 20 */ "kk",             // k, g, ŋ
+      /* 21 */ "PP"              // p, b, m
+        ];
+
+        const AzureBlendshapeMap = [
+      /* 0  */ "eyeBlinkLeft",
+      /* 1  */ "eyeLookDownLeft",
+      /* 2  */ "eyeLookInLeft",
+      /* 3  */ "eyeLookOutLeft",
+      /* 4  */ "eyeLookUpLeft",
+      /* 5  */ "eyeSquintLeft",
+      /* 6  */ "eyeWideLeft",
+      /* 7  */ "eyeBlinkRight",
+      /* 8  */ "eyeLookDownRight",
+      /* 9  */ "eyeLookInRight",
+      /* 10 */ "eyeLookOutRight",
+      /* 11 */ "eyeLookUpRight",
+      /* 12 */ "eyeSquintRight",
+      /* 13 */ "eyeWideRight",
+      /* 14 */ "jawForward",
+      /* 15 */ "jawLeft",
+      /* 16 */ "jawRight",
+      /* 17 */ "jawOpen",
+      /* 18 */ "mouthClose",
+      /* 19 */ "mouthFunnel",
+      /* 20 */ "mouthPucker",
+      /* 21 */ "mouthLeft",
+      /* 22 */ "mouthRight",
+      /* 23 */ "mouthSmileLeft",
+      /* 24 */ "mouthSmileRight",
+      /* 25 */ "mouthFrownLeft",
+      /* 26 */ "mouthFrownRight",
+      /* 27 */ "mouthDimpleLeft",
+      /* 28 */ "mouthDimpleRight",
+      /* 29 */ "mouthStretchLeft",
+      /* 30 */ "mouthStretchRight",
+      /* 31 */ "mouthRollLower",
+      /* 32 */ "mouthRollUpper",
+      /* 33 */ "mouthShrugLower",
+      /* 34 */ "mouthShrugUpper",
+      /* 35 */ "mouthPressLeft",
+      /* 36 */ "mouthPressRight",
+      /* 37 */ "mouthLowerDownLeft",
+      /* 38 */ "mouthLowerDownRight",
+      /* 39 */ "mouthUpperUpLeft",
+      /* 40 */ "mouthUpperUpRight",
+      /* 41 */ "browDownLeft",
+      /* 42 */ "browDownRight",
+      /* 43 */ "browInnerUp",
+      /* 44 */ "browOuterUpLeft",
+      /* 45 */ "browOuterUpRight",
+      /* 46 */ "cheekPuff",
+      /* 47 */ "cheekSquintLeft",
+      /* 48 */ "cheekSquintRight",
+      /* 49 */ "noseSneerLeft",
+      /* 50 */ "noseSneerRight",
+      /* 51 */ "tongueOut",
+      /* 52 */ "headRotateZ",
+            /* 53 */ // "leftEyeRoll", // Not supported
+            /* 54 */ // "rightEyeRoll" // Not supported
+        ];
+        let head;
+        let microsoftSynthesizer = null;
+
+        function resetLipsyncBuffers() {
+            visemesbuffer = {
+                visemes: [],
+                vtimes: [],
+                vdurations: [],
+            };
+            prevViseme = null;
+            wordsbuffer = {
+                words: [],
+                wtimes: [],
+                wdurations: []
+            };
+            azureBlendShapes = {
+                frames: [],
+                sbuffer: [],
+                orderBuffer: {}
+            };
+
+        }
+
+        let visemesbuffer = null;
+        let prevViseme = null;
+        let wordsbuffer = null;
+        let azureBlendShapes = null;
+        let lipsyncType = "visemes";
+        resetLipsyncBuffers();
+
+        async function fetchAzureCredentials() {
+            try {
+                const res = await fetch("/api/token");
+                const { token, region } = await res.json();
+                sessionStorage.setItem('azureTTSKey', token);  // aún se llama así en tu código
+                sessionStorage.setItem('azureRegion', region);
+
+            } catch (err) {
+                alert("Error obteniendo token de Azure");
+                console.error(err);
+            }
+        }
+
+
+
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            console.log("Loading Talking Head...");
+
+            await fetchAzureCredentials(); // ✅ Primero obtiene la key desde el servidor
+            const nodeAvatar = document.getElementById('avatar');
+            const nodeSpeak = document.getElementById('speak');
+            const nodeLoading = document.getElementById('loading');
+            const regionValue = sessionStorage.getItem('azureRegion');
+            const keyValue = sessionStorage.getItem('azureTTSKey');
+
+
+            // Initialize TalkingHead
+            head = new TalkingHead(nodeAvatar, {
+                ttsEndpoint: "/gtts/",
+                cameraView: "upper",
+                lipsyncLang: "en"
+            });
+
+            // Show "Loading..." by default
+            nodeLoading.textContent = "Loading...";
+
+            // Load the avatar
+            try {
+                await head.showAvatar(
+                    {
+                        url: 'https://models.readyplayer.me/64bfa15f0e72c63d7c3934a6.glb?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png',
+                        body: 'F',
+                    },
+                    (ev) => {
+                        if (ev.lengthComputable) {
+                            const percent = Math.round((ev.loaded / ev.total) * 100);
+                            nodeLoading.textContent = `Loading ${percent}%`;
+                        } else {
+                            nodeLoading.textContent = `Loading... ${Math.round(ev.loaded / 1024)} KB`;
+                        }
+                    }
+                );
+                // Hide the loading element once fully loaded
+                nodeLoading.style.display = 'none';
+            } catch (error) {
+                console.error("Error loading avatar:", error);
+                nodeLoading.textContent = "Failed to load avatar.";
+            }
+
+            // Handle speech button click
+            // nodeSpeak.addEventListener('click', () => {
+            //     const text = document.getElementById('text').value.trim();
+            //     lipsyncType = "visemes";
+            //     if (text) {
+            //         const ssml = textToSSML(text);
+            //         azureSpeak(ssml);
+            //     }
+            // });
+
+            // Pause/resume animation on visibility change
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") {
+                    head.start();
+                } else {
+                    head.stop();
+                }
+            });
+
+            // Convert input text to SSML
+            function textToSSML(text) {
+                return `
+          <speak version="1.0" xmlns:mstts="http://www.w3.org/2001/mstts" xml:lang="es-ES">
+            <voice name="es-ES-AlvaroNeural">
+              <mstts:viseme type="FacialExpression" />
+              ${text
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')}
+            </voice>
+          </speak>`;
+            }
+
+            // Perform Azure TTS
+            function azureSpeak(ssml) {
+                if (!microsoftSynthesizer) {
+                    // Retrieve config from input fields
+                    const regionValue = sessionStorage.getItem('azureRegion');
+                    const keyValue = sessionStorage.getItem('azureTTSKey');
+                    console.log("Token recibido:", keyValue);
+                    console.log("Región:", regionValue);
+
+
+                    if (!regionValue || !keyValue) {
+                        console.error("Azure TTS region/key missing!");
+                        alert("Please enter your Azure TTS key and region in the settings panel.");
+                        return;
+                    }
+
+                    const config = window.SpeechSDK.SpeechConfig.fromAuthorizationToken(keyValue, regionValue);
+                    config.speechSynthesisOutputFormat =
+                        window.SpeechSDK.SpeechSynthesisOutputFormat.Raw48Khz16BitMonoPcm;
+                    microsoftSynthesizer = new window.SpeechSDK.SpeechSynthesizer(config, null);
+
+                    // Handle the synthesis results
+                    microsoftSynthesizer.synthesizing = (s, e) => {
+
+                        switch (lipsyncType) {
+                            case "blendshapes":
+                                head.streamAudio({
+                                    audio: e.result.audioData,
+                                    anims: azureBlendShapes?.sbuffer.splice(0, azureBlendShapes?.sbuffer.length)
+                                });
+                                break;
+                            case "visemes":
+                                head.streamAudio({
+                                    audio: e.result.audioData,
+                                    visemes: visemesbuffer.visemes.splice(0, visemesbuffer.visemes.length),
+                                    vtimes: visemesbuffer.vtimes.splice(0, visemesbuffer.vtimes.length),
+                                    vdurations: visemesbuffer.vdurations.splice(0, visemesbuffer.vdurations.length),
+                                });
+                                break;
+                            case "words":
+                                head.streamAudio({
+                                    audio: e.result.audioData,
+                                    words: wordsbuffer.words.splice(0, wordsbuffer.words.length),
+                                    wtimes: wordsbuffer.wtimes.splice(0, wordsbuffer.wtimes.length),
+                                    wdurations: wordsbuffer.wdurations.splice(0, wordsbuffer.wdurations.length)
+                                });
+                                break;
+                            default:
+                                console.error(`Unknown animation mode: ${lipsyncType}`);
+                        }
+                    };
+
+                    // Viseme handling
+                    microsoftSynthesizer.visemeReceived = (s, e) => {
+                        if (lipsyncType === "visemes") {
+                            const vtime = e.audioOffset / 10000;
+                            const viseme = visemeMap[e.visemeId];
+                            if (!head.isStreaming) return;
+                            if (prevViseme) {
+                                let vduration = vtime - prevViseme.vtime;
+                                if (vduration < 40) vduration = 40;
+                                visemesbuffer.visemes.push(prevViseme.viseme);
+                                visemesbuffer.vtimes.push(prevViseme.vtime);
+                                visemesbuffer.vdurations.push(vduration);
+                            }
+                            prevViseme = { viseme, vtime };
+
+                        } else if (lipsyncType === "blendshapes") {
+                            let animation = null;
+                            if (e?.animation && e.animation.trim() !== "") {
+                                try {
+                                    animation = JSON.parse(e.animation);
+                                } catch (error) {
+                                    console.error("Error parsing animation blendshapes:", error);
+                                    return;
+                                }
+                            }
+                            if (!animation) return;
+                            const vs = {};
+                            AzureBlendshapeMap.forEach((mtName, i) => {
+                                vs[mtName] = animation.BlendShapes.map(frame => frame[i]);
+                            });
+
+                            azureBlendShapes.sbuffer.push({
+                                name: "blendshapes",
+                                delay: animation.FrameIndex * 1000 / 60,
+                                dt: Array.from({ length: animation.BlendShapes.length }, () => 1000 / 60),
+                                vs: vs,
+                            });
+                        }
+                    };
+
+                    // Process word boundaries and punctuations
+                    microsoftSynthesizer.wordBoundary = function (s, e) {
+                        const word = e.text;
+                        const time = e.audioOffset / 10000;
+                        const duration = e.duration / 10000;
+
+                        if (e.boundaryType === "PunctuationBoundary" && wordsbuffer.words.length) {
+                            wordsbuffer.words[wordsbuffer.words.length - 1] += word;
+                            wordsbuffer.wdurations[wordsbuffer.wdurations.length - 1] += duration;
+                        } else if (e.boundaryType === "WordBoundary" || e.boundaryType === "PunctuationBoundary") {
+                            wordsbuffer.words.push(word);
+                            wordsbuffer.wtimes.push(time);
+                            wordsbuffer.wdurations.push(duration);
+                        }
+                    };
+                }
+
+                // Start stream speaking
+                head.streamStart(
+                    { sampleRate: 48000, mood: "happy", gain: 0.5, lipsyncType: lipsyncType },
+                    () => {
+                        console.log("Audio playback started.");
+                        const subtitlesElement = document.getElementById("subtitles");
+                        subtitlesElement.textContent = "";
+                        subtitlesElement.style.display = "none";
+                    },
+                    () => {
+                        console.log("Audio playback ended.");
+                        const subtitlesElement = document.getElementById("subtitles");
+                        const displayDuration = Math.max(2000, subtitlesElement.textContent.length * 50);
+                        setTimeout(() => {
+                            subtitlesElement.textContent = "";
+                            subtitlesElement.style.display = "none";
+                        }, displayDuration);
+                    },
+                    (subtitleText) => {
+                        console.log("subtitleText: ", subtitleText);
+                        const subtitlesElement = document.getElementById("subtitles");
+                        subtitlesElement.textContent += subtitleText;
+                        subtitlesElement.style.display = subtitlesElement.textContent ? "block" : "none";
+                    }
+                );
+
+                // Perform TTS
+                microsoftSynthesizer.speakSsmlAsync(
+                    ssml,
+                    (result) => {
+                        if (result.reason === window.SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+                            if (lipsyncType === "visemes" && prevViseme) {
+                                // Final viseme duration guess
+                                const finalDuration = 100;
+                                // Add to visemesbuffer
+                                visemesbuffer.visemes.push(prevViseme.viseme);
+                                visemesbuffer.vtimes.push(prevViseme.vtime);
+                                visemesbuffer.vdurations.push(finalDuration);
+                                // Now clear the last viseme
+                                prevViseme = null;
+                            }
+                            let speak = {};
+                            // stream any remaining visemes, blendshapes, or words
+                            if (lipsyncType === "visemes" && visemesbuffer.visemes.length) {
+                                speak.visemes = visemesbuffer.visemes.splice(0, visemesbuffer.visemes.length);
+                                speak.vtimes = visemesbuffer.vtimes.splice(0, visemesbuffer.vtimes.length);
+                                speak.vdurations = visemesbuffer.vdurations.splice(0, visemesbuffer.vdurations.length);
+                            }
+                            if (lipsyncType === "blendshapes") {
+                                speak.anims = azureBlendShapes?.sbuffer.splice(0, azureBlendShapes?.sbuffer.length);
+                            }
+
+                            // stream words always for subtitles
+                            speak.words = wordsbuffer.words.splice(0, wordsbuffer.words.length);
+                            speak.wtimes = wordsbuffer.wtimes.splice(0, wordsbuffer.wtimes.length);
+                            speak.wdurations = wordsbuffer.wdurations.splice(0, wordsbuffer.wdurations.length);
+
+                            if (speak.visemes || speak.words || speak.anims) {
+                                // If we have any visemes, words, or blendshapes left, stream them
+                                speak.audio = null;
+                                head.streamAudio(speak);
+                            }
+
+                            head.streamNotifyEnd();
+                            resetLipsyncBuffers();
+                            console.log("Speech synthesis completed.");
+                        }
+                    },
+                    (error) => {
+                        console.error("Azure speech synthesis error:", error);
+                        resetLipsyncBuffers();
+                    }
+                );
+            }
+
+        });
+
+
+
+        let aiController = null;
+
+        async function openaiSendMessage(node, msgs) {
+            aiController = new AbortController();
+            const signal = aiController.signal;
+
+            // Configurar endpoint y headers
+            const apikey = "sk-proj-99..."; // Usa tu key hardcodeada aquí
+            const url = "https://api.openai.com/v1/chat/completions"; // Define esta constante con tu endpoint OpenAI
+            const headers = {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + apikey
+            };
+
+            const body = {
+                model: "gpt-4o-mini",
+                messages: msgs,
+                temperature: 0.7,
+                presence_penalty: 0,
+                frequency_penalty: 0,
+                max_tokens: 1000,
+                stream: true,
+            };
+
+            try {
+                node.dataset.output = '';
+                let tts = '';
+                let fn = { id: '', name: '', arguments: '' };
+
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers,
+                    body: JSON.stringify(body),
+                    signal,
+                });
+
+                if (!res.ok) throw new Error(`Error ${res.status}`);
+
+                const reader = res.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value);
+                    chunk.split('\n').forEach(line => {
+                        if (!line.startsWith("data: ")) return;
+                        const jsonStr = line.substring(6).trim();
+                        if (jsonStr === '[DONE]') return;
+
+                        let obj;
+                        try {
+                            obj = JSON.parse(jsonStr);
+                        } catch {
+                            console.warn("No se pudo parsear:", jsonStr);
+                            return;
+                        }
+
+                        if (obj.error) throw new Error(obj.error.message);
+
+                        fn.id += obj?.choices?.[0]?.delta?.tool_calls?.[0]?.id || '';
+                        fn.name += obj?.choices?.[0]?.delta?.tool_calls?.[0]?.function?.name || '';
+                        fn.arguments += obj?.choices?.[0]?.delta?.tool_calls?.[0]?.function?.arguments || '';
+
+                        const content = obj?.choices?.[0]?.delta?.content || '';
+                        node.dataset.output += content;
+                        tts += content;
+                    });
+                }
+
+                // Ejecutar animación si tool_call existe
+                if (fn.id) {
+                    try {
+                        const args = JSON.parse(fn.arguments);
+                        motion(args.action, args.stillpose, args.gesture, args.mood);
+                    } catch (e) {
+                        console.error("Error ejecutando motion:", e);
+                    }
+                }
+
+                // Hablar la respuesta usando microsoftSpeak
+                if (tts.trim()) {
+                    await microsoftSpeak(tts.trim(), node, () => {
+                        addText(node, tts.trim());
+                    });
+                }
+
+            } catch (error) {
+                if (signal.aborted) {
+                    console.log("Petición abortada");
+                } else {
+                    console.error("Error openaiSendMessage:", error);
+                    addText(node, `[Error: ${error.message || error}]`);
+                }
+            } finally {
+                aiController = null;
+            }
+        }
+
+
+
+
+
+        const microsoftQueue = [];
+
+        async function microsoftSpeak(s, node = null, onprocessed = null) {
+
+            if (s === null) {
+                microsoftQueue.push(null);
+            } else {
+
+                // Voice config
+                const id = "es-ES-AlvaroNeural";
+                const lang = "es-ES";
+
+                // SSML
+                const ssml = "<speak version='1.0' " +
+                    "xmlns:mstts='http://www.w3.org/2001/mstts' " +
+                    "xml:lang='" + lang + "'>" +
+                    "<voice name='" + id + "'>" +
+                    "<mstts:viseme type='redlips_front'/>" +
+                    s.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;') +
+                    "</voice>" +
+                    "</speak>";
+
+                microsoftQueue.push({
+                    ssml: ssml,
+                    node: node,
+                    onprocessed: onprocessed,
+                    speak: {
+                        audio: [], words: [], wtimes: [], wdurations: [],
+                        visemes: [], vtimes: [], vdurations: [], markers: [], mtimes: []
+                    }
+                });
+            }
+
+            // If this was the first item, start the process
+            if (microsoftQueue.length === 1) {
+                microsoftProcessQueue();
+            }
+        }
+
+        async function microsoftProcessQueue() {
+
+            if (microsoftQueue.length) {
+
+                const job = microsoftQueue[0];
+
+                if (job === null) {
+                    microsoftQueue.shift();
+                    if (microsoftQueue.length === 0 && microsoftSynthesizer) {
+                        microsoftSynthesizer.close();
+                        microsoftSynthesizer = null;
+                    }
+                } else {
+
+                    // If we do not have a speech synthesizer, create a new
+                    if (!microsoftSynthesizer) {
+
+                        // Create a new speech synthesizer
+                        const apikey = "7sE2...."; // aquí la clave fija
+                        const endpoint = "wss://eastus2.tts.speech.microsoft.com/cognitiveservices/websocket/v1"; // o el endpoint que uses
+                        const config = window.SpeechSDK.SpeechConfig.fromEndpoint(endpoint, apikey);
+                        config.setProperty("SpeechServiceConnection_Endpoint", endpoint);
+                        config.speechSynthesisOutputFormat = window.SpeechSDK.SpeechSynthesisOutputFormat.Raw22050Hz16BitMonoPcm;
+                        config.setProperty(window.SpeechSDK.PropertyId.SpeechServiceResponse_RequestSentenceBoundary, "true");
+                        microsoftSynthesizer = new window.SpeechSDK.SpeechSynthesizer(config, null);
+
+                        // Viseme conversion from Microsoft to Oculus
+                        // TODO: Check this conversion again!
+                        const visemeMap = [
+                            "sil", 'aa', 'aa', 'O', 'E', // 0 - 4
+                            'E', 'I', 'U', 'O', 'aa', // 5 - 9
+                            'O', 'I', 'kk', 'RR', 'nn', // 10 - 14
+                            'SS', 'SS', 'TH', 'FF', 'DD', // 15 - 19
+                            'kk', 'PP' // 20 - 21
+                        ];
+
+                        // Process visemes
+                        microsoftSynthesizer.visemeReceived = function (s, e) {
+                            if (microsoftQueue[0] && microsoftQueue[0].speak) {
+                                const o = microsoftQueue[0].speak;
+                                const viseme = visemeMap[e.visemeId];
+                                const time = e.audioOffset / 10000;
+
+                                // Calculate the duration of the previous viseme
+                                if (o.vdurations.length) {
+
+                                    if (o.visemes[o.visemes.length - 1] === 0) {
+                                        o.visemes.pop();
+                                        o.vtimes.pop();
+                                        o.vdurations.pop();
+                                    } else {
+                                        // Remove silence
+                                        o.vdurations[o.vdurations.length - 1] = time - o.vtimes[o.vdurations.length - 1];
+                                    }
+                                }
+
+
+
+                                // Add this viseme
+                                o.visemes.push(viseme);
+                                o.vtimes.push(time);
+                                o.vdurations.push(75); // Duration will be fixed when the next viseme is received
+                            }
+                        };
+
+                        // Process word boundaries and punctuations
+                        microsoftSynthesizer.wordBoundary = function (s, e) {
+                            if (microsoftQueue[0] && microsoftQueue[0].speak) {
+                                const o = microsoftQueue[0].speak;
+                                const word = e.text;
+                                const time = e.audioOffset / 10000;
+                                const duration = e.duration / 10000;
+
+                                if (e.boundaryType === "PunctuationBoundary" && o.words.length) {
+                                    o.words[o.words.length - 1] += word;
+                                } else if (e.boundaryType === "WordBoundary" || e.boundaryType === "PunctuationBoundary") {
+                                    o.words.push(word);
+                                    o.wtimes.push(time);
+                                    o.wdurations.push(duration);
+                                } else if (e.boundaryType === "SentenceBoundary") {
+                                    if (time > 500) {
+                                        o.markers.push(() => { head.lookAtCamera(500); });
+                                        o.mtimes.push(time - 500);
+                                    }
+                                }
+                            }
+                        };
+
+                    }
+
+                    // Speak the SSML
+                    microsoftSynthesizer.speakSsmlAsync(job.ssml,
+                        function (result) {
+                            if (microsoftQueue[0] && microsoftQueue[0].speak) {
+                                if (result.reason === window.SpeechSDK.ResultReason.SynthesizingAudioCompleted) {
+                                    const job = microsoftQueue[0];
+                                    job.speak.audio.push(result.audioData);
+                                    head.speakAudio(job.speak, {}, job.node ? addText.bind(null, job.node) : null);
+                                    if (job.onprocessed) job.onprocessed();
+                                }
+                                microsoftQueue.shift();
+                                microsoftProcessQueue();
+                            }
+                        }, function (err) {
+                            if (job.onprocessed) job.onprocessed();
+                            console.log(err);
+                            microsoftQueue.shift();
+                            microsoftProcessQueue();
+                        }
+                    );
+
+                }
+            }
+        }
+
+        document.getElementById('speak').addEventListener('click', async () => {
+            const input = document.getElementById('text');
+            const userMsg = input.value.trim();
+            if (!userMsg) return;
+
+            const messagesNode = document.getElementById('messages');
+            addText(messagesNode, 'Usuario: ' + userMsg);
+
+            await openaiSendMessage(messagesNode, [
+                { role: 'user', content: userMsg }
+            ]);
+
+            input.value = '';
+        });
+
+
+        // Add text to session
+        function addText(node, s) {
+            if (!node) return;
+
+            // Verificamos si el scroll está abajo
+            const onbottom = Math.abs(node.scrollHeight - node.scrollTop - node.clientHeight) < 20;
+
+            let last = node.lastElementChild;
+
+            // Si no hay elementos aún, creamos uno
+            if (!last) {
+                last = document.createElement('p');
+                node.appendChild(last);
+                last.dataset.markdown = '';
+            }
+
+            let markdown = (last.dataset.markdown || '') + s;
+            let ndx = markdown.lastIndexOf('\n\n');
+
+            if (ndx === -1) {
+                // Actualizar párrafo actual
+                last.innerHTML = dompurify.sanitize(marked.parseInline(markdown, markedOptions));
+                last.dataset.markdown = markdown;
+            } else {
+                // Dividir en dos párrafos
+                let md = markdown.substring(0, ndx);
+                last.innerHTML = dompurify.sanitize(marked.parseInline(md, markedOptions));
+                last.dataset.markdown = md;
+
+                md = markdown.substring(ndx + 2);
+                last = document.createElement('p');
+                last.innerHTML = dompurify.sanitize(marked.parseInline(md, markedOptions));
+                last.dataset.markdown = md;
+                node.appendChild(last);
+            }
+
+            // Scroll automático si estaba al final
+            if (onbottom) {
+                node.scrollTop = node.scrollHeight;
+            }
+        }
+    </script>
 
 </head>
 
 <body>
-  <div id="container">
-    <div id="avatar"></div>
-    <div id="loading"></div>
-    <div id="subtitles"></div>
-    
-    <div id="chat-container">
-      <div id="messages"></div>
-      
-      <div id="controls">
-        <textarea id="text" rows="3" placeholder="Escribe tu mensaje aquí..."></textarea>
-        <button id="speak">Hablar</button>
-      </div>
+    <div id="container">
+        <div id="avatar"></div>
+        <div id="loading"></div>
+        <div id="subtitles"></div>
 
+        <div id="chat-container">
+            <div id="messages"></div>
+
+            <div id="controls">
+                <textarea id="text" rows="3" placeholder="Escribe tu mensaje aquí..."></textarea>
+                <button id="speak">Hablar</button>
+            </div>
+
+        </div>
     </div>
-  </div>
 </body>
-
-
 
 </html>
