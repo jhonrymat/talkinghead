@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Talking Head - Azure TTS Audio Streaming Example</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- importar hoja de estilos -->
+    <link rel="stylesheet" href="./css/styles.css">
+
+    <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js/+esm",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+        "talkinghead": "../modules/talkinghead.mjs"
+      }
+    }    
+  </script>
+
+    <script
+        src="https://cdn.jsdelivr.net/npm/microsoft-cognitiveservices-speech-sdk@latest/distrib/browser/microsoft.cognitiveservices.speech.sdk.bundle-min.js"></script>
+
+
+    <script type="module" src="./js/talkinghead-app.js"></script>
+
+</head>
+
+<body>
+    <!-- 3D Avatar -->
+    <div id="avatar"></div>
+    <div id="subtitles"></div>
+
+    <!-- Controls at the top -->
+    <div id="controls">
+        <input id="text" type="text" value="Hola como estas?" />
+        <button id="speak">Speak</button>
+    </div>
+
+
+
+    <!-- Loading or error display -->
+    <div id="loading"></div>
+</body>
+
+</html>

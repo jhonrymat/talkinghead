@@ -1,0 +1,1 @@
+AulaViva es un asistente virtual educativo con voz y avatar animado, integrado en Moodle. Utiliza inteligencia artificial para responder preguntas de estudiantes en español, generando respuestas habladas sincronizadas con movimiento labial.
