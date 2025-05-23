@@ -23,24 +23,28 @@
 
 
     <script type="module" src="./js/talkinghead-app.js"></script>
+    <script type="script" src="./js/chat.js"></script>
 
 </head>
 
 <body>
-    <!-- 3D Avatar -->
+  <div id="container">
     <div id="avatar"></div>
-    <div id="subtitles"></div>
-
-    <!-- Controls at the top -->
-    <div id="controls">
-        <input id="text" type="text" value="Hola como estas?" />
-        <button id="speak">Speak</button>
-    </div>
-
-
-
-    <!-- Loading or error display -->
     <div id="loading"></div>
+    <div id="subtitles"></div>
+    
+    <div id="chat-container">
+      <div id="messages"></div>
+      
+      <div id="controls">
+        <textarea id="text" rows="3" placeholder="Escribe tu mensaje aquí..."></textarea>
+        <button id="speak">Hablar</button>
+      </div>
+
+    </div>
+  </div>
 </body>
+
+
 
 </html>

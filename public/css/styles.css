@@ -1,140 +1,119 @@
-body,
-        html {
-            width: 100%;
-            height: 100%;
-            max-width: 800px;
-            margin: auto;
-            position: relative;
-            background-color: #202020;
-            color: white;
-            font-family: Arial, sans-serif;
-            overflow: hidden;
-        }
+html, body {
+  margin: 0; padding: 0; height: 100%;
+  background-color: #202020;
+  color: white;
+  font-family: Arial, sans-serif;
+  overflow: hidden;
+}
 
-        /* The main 3D avatar container */
-        #avatar {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
+#container {
+  display: flex;
+  height: 100vh;
+  max-width: 100vw;
+}
 
-        /* Controls container at top */
-        #controls {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            right: 10px;
-            height: 40px;
-        }
+/* Avatar a la izquierda */
+#avatar {
+  flex: 0 0 40%;
+  height: 100%;
+  background: #111; /* fallback si avatar tarda */
+}
 
-        #text {
-            flex: 1;
-            font-size: 20px;
-            height: 100%;
-            padding: 5px;
-            box-sizing: border-box;
-        }
+/* Contenedor del chat */
+#chat-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  box-sizing: border-box;
+  position: relative;
+  background: #282828;
+}
 
-        #speak {
-            width: 100px;
-            height: 100%;
-            font-size: 16px;
-            cursor: pointer;
-        }
+/* Área para mostrar mensajes */
+#messages {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 10px;
+  border: 1px solid #444;
+  border-radius: 5px;
+  padding: 10px;
+  background: #1a1a1a;
+  font-size: 1rem;
+  line-height: 1.4;
+}
 
-        /* Settings toggle button */
-        #settings-button {
-            width: 80px;
-            height: 100%;
-            font-size: 16px;
-            background: #333;
-            color: #fff;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-        }
+/* Controles para enviar mensaje */
+#controls {
+  display: flex;
+  gap: 10px;
+}
 
-        #settings-button:hover {
-            background: #444;
-        }
+#text {
+  flex: 1;
+  resize: none;
+  font-size: 1rem;
+  padding: 8px;
+  border-radius: 5px;
+  border: none;
+  background: #333;
+  color: white;
+  box-sizing: border-box;
+  outline: none;
+  min-height: 50px;
+}
 
-        /* Collapsible Settings Panel */
-        #settings-panel {
-            position: absolute;
-            top: 60px;
-            right: 10px;
-            width: 220px;
-            background-color: #333;
-            padding: 10px;
-            border-radius: 5px;
-            display: none;
-            /* hidden by default */
-            z-index: 998;
-        }
+#speak {
+  width: 100px;
+  cursor: pointer;
+  background: #0078d7;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+}
 
-        #settings-panel label {
-            display: block;
-            margin-top: 10px;
-            font-weight: bold;
-            font-size: 0.9rem;
-        }
+#speak:hover {
+  background: #005fa3;
+}
 
-        #settings-panel input {
-            width: calc(100% - 10px);
-            padding: 5px;
-            margin-top: 5px;
-            font-size: 0.9rem;
-            box-sizing: border-box;
-        }
+/* Loading y subtitles */
+#loading {
+  position: absolute;
+  bottom: 50px;
+  left: 10px;
+  font-size: 1.1rem;
+  color: #aaa;
+}
 
-        /* When the body gets a class "show-settings", show the panel */
-        body.show-settings #settings-panel {
-            display: block;
-        }
+#subtitles {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  font-size: 1.1rem;
+  text-align: center;
+  color: #eee;
+  background: rgba(0,0,0,0.5);
+  padding: 5px 10px;
+  border-radius: 5px;
+  pointer-events: none;
+  user-select: none;
+  display: none;
+}
 
-        /* Loading text at bottom-left */
-        #loading {
-            display: block;
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            right: 10px;
-            height: 40px;
-            font-size: 20px;
-        }
-
-        #subtitles {
-            position: absolute;
-            bottom: 50px;
-            left: 10%;
-            right: 10%;
-            text-align: center;
-            font-size: 1.2em;
-            color: #ffffff;
-            text-shadow: 1px 1px 4px rgba(0, 0, 0, 0.7);
-            pointer-events: none;
-            z-index: 1000;
-            padding: 5px 10px;
-            border-radius: 5px;
-            background: rgba(0, 0, 0, 0.3);
-            display: none;
-        }
-
-        #lipsync-type {
-            text-align: left;
-        }
-
-        #lipsync-type label {
-            display: inline-flex;
-            align-items: center;
-            margin-right: 1rem;
-        }
-
-        #lipsync-type label input[type="radio"] {
-            display: inline-block !important;
-            width: auto !important;
-            margin-right: 0.3rem;
-        }
+/* Responsive para móviles: avatar arriba, chat abajo */
+@media (max-width: 768px) {
+  #container {
+    flex-direction: column;
+  }
+  #avatar {
+    flex: none;
+    height: 300px;
+    width: 100%;
+  }
+  #chat-container {
+    flex: 1;
+    height: auto;
+  }
+}
