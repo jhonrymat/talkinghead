@@ -1,5 +1,8 @@
-html, body {
-  margin: 0; padding: 0; height: 100%;
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
   background-color: #202020;
   color: white;
   font-family: Arial, sans-serif;
@@ -16,7 +19,8 @@ html, body {
 #avatar {
   flex: 0 0 40%;
   height: 100%;
-  background: #111; /* fallback si avatar tarda */
+  background: #111;
+  /* fallback si avatar tarda */
 }
 
 /* Contenedor del chat */
@@ -28,27 +32,60 @@ html, body {
   box-sizing: border-box;
   position: relative;
   background: #282828;
+  height: 100vh;
 }
 
 /* Área para mostrar mensajes */
 #messages {
   flex: 1;
+  /* para que crezca y tome todo el espacio disponible */
   overflow-y: auto;
-  margin-bottom: 10px;
-  border: 1px solid #444;
-  border-radius: 5px;
   padding: 10px;
-  background: #1a1a1a;
+  background-color: #1a1a1a;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+  /* espacio para que no quede pegado al controls */
+}
+
+.message {
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  border-radius: 20px;
+  max-width: 70%;
+  word-wrap: break-word;
   font-size: 1rem;
-  line-height: 1.4;
+  line-height: 1.3;
+}
+
+.message.user {
+  background-color: #0078d7;
+  color: white;
+  align-self: flex-end;
+  border-bottom-right-radius: 0;
+}
+
+.message.assistant {
+  background-color: #444;
+  color: white;
+  align-self: flex-start;
+  border-bottom-left-radius: 0;
 }
 
 /* Controles para enviar mensaje */
 #controls {
+  flex-shrink: 0;
   display: flex;
   gap: 10px;
+  padding-top: 10px;
+  background: #282828;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
 }
 
+/* Textarea */
 #text {
   flex: 1;
   resize: none;
@@ -63,6 +100,7 @@ html, body {
   min-height: 50px;
 }
 
+/* Botón */
 #speak {
   width: 100px;
   cursor: pointer;
@@ -78,12 +116,55 @@ html, body {
 }
 
 /* Loading y subtitles */
+/* Loading */
 #loading {
+  display: block;
   position: absolute;
-  bottom: 50px;
-  left: 10px;
-  font-size: 1.1rem;
-  color: #aaa;
+  top: 6px;
+  left: 6px;
+  width: 300px;
+  height: 30px;
+  pointer-events: none;
+  font-size: 1rem;
+  background-color: transparent;
+}
+
+#loading-back,
+#loading-top {
+  display: block;
+  position: absolute;
+  top: 10px;
+  left: 20px;
+  bottom: 10px;
+  width: 95px;
+}
+
+#loading-back {
+  background: repeating-linear-gradient(to right, var(--colorToolbarPassive2),
+      var(--colorToolbarPassive) 5px,
+      transparent 5px,
+      transparent 10px);
+}
+
+#loading-top {
+  clip-path: inset(0 100% 0 0);
+  background: repeating-linear-gradient(to right, var(--colorBody),
+      var(--colorBody) 5px,
+      transparent 5px,
+      transparent 10px);
+}
+
+#loading-value {
+  display: block;
+  position: absolute;
+  top: 0;
+  left: 125px;
+  bottom: 0;
+  right: 0;
+  line-height: 30px;
+  text-align: left;
+  font-size: 1.4rem;
+  font-family: "SansRegularCondensed";
 }
 
 #subtitles {
@@ -94,12 +175,13 @@ html, body {
   font-size: 1.1rem;
   text-align: center;
   color: #eee;
-  background: rgba(0,0,0,0.5);
+  background: rgba(0, 0, 0, 0.5);
   padding: 5px 10px;
   border-radius: 5px;
   pointer-events: none;
   user-select: none;
   display: none;
+  /* Este display se cambia a 'block' dinámicamente */
 }
 
 /* Responsive para móviles: avatar arriba, chat abajo */
@@ -107,13 +189,37 @@ html, body {
   #container {
     flex-direction: column;
   }
+
   #avatar {
     flex: none;
     height: 300px;
     width: 100%;
   }
+
   #chat-container {
     flex: 1;
     height: auto;
   }
+}
+
+
+
+
+
+.message.assistant strong {
+  font-weight: bold;
+}
+
+.message.assistant em {
+  font-style: italic;
+}
+
+.message.assistant ul {
+  padding-left: 20px;
+  margin: 0;
+}
+
+.message.assistant li {
+  list-style-type: disc;
+  margin-bottom: 5px;
 }
