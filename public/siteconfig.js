@@ -19,6 +19,8 @@ export const site = {
     "en-F": { id: "en-GB-Standard-A" },
     "en-M": { id: "en-GB-Standard-D" },
     "es-M": { id: "es-ES-Standard-A" },
+    "es-F": { id: "es-ES-Standard-B" },
+    "es-MX": { id: "es-MX-Standard-A" },
   },
 
   // ElevenLab voices
