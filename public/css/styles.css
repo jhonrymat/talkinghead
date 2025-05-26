@@ -41,6 +41,8 @@ body {
   /* para que crezca y tome todo el espacio disponible */
   overflow-y: auto;
   padding: 10px;
+  padding-bottom: 80px;
+  /* NUEVO: espacio para el textarea y botones */
   background-color: #1a1a1a;
   border-radius: 8px;
   display: flex;
@@ -72,6 +74,14 @@ body {
   align-self: flex-start;
   border-bottom-left-radius: 0;
 }
+
+.message audio {
+  max-width: 100%;
+  width: 100%;
+  height: 32px;
+  border-radius: 10px;
+}
+
 
 /* Controles para enviar mensaje */
 #controls {
@@ -233,7 +243,26 @@ button:disabled {
 
   #chat-container {
     flex: 1;
-    height: auto;
+    max-height: calc(100vh - 240px);
+  }
+
+  #controls {
+    flex-wrap: wrap;
+  }
+
+  #text {
+    width: 100%;
+  }
+
+  #mic-button,
+  #speak {
+    width: 38px;
+    height: 38px;
+  }
+
+  #mic-timer {
+    display: inline;
+    margin-left: auto;
   }
 }
 

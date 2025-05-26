@@ -8,6 +8,12 @@
     <link rel="stylesheet" href="./css/styles.css">
     <!-- favicon -->
     <link rel="icon" type="image/png" href="favicon.png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8">
+    <meta name="description" content="AulaViva es un asistente virtual que utiliza inteligencia artificial para interactuar con los usuarios.">
+    <meta name="keywords" content="AulaViva, asistente virtual, inteligencia artificial, IA, chatbot, OpenAI, Google TTS">
+    <meta name="author" content="Nomaddi SAS Team">
+    
 
     <script type="importmap">
   { "imports":
@@ -137,6 +143,8 @@
 
             const nodeSpeak = document.getElementById('speak');
             const textInput = document.getElementById('text');
+            const micButton = document.getElementById('mic-button');
+
 
             nodeSpeak.addEventListener('click', sendMessage);
 
@@ -208,67 +216,44 @@
             }
 
             async function sendMessage() {
-                if (isSpeaking) return; // ⛔ evita envío si está hablando
+                if (isSpeaking) return;
+
                 try {
                     const text = textInput.value.trim();
 
-                    if (text) {
-                        addMessage(text, 'user');
-                        textInput.value = '';
-                        isSpeaking = true; // 🔒 bloquear
-                        nodeSpeak.disabled = true; // ✅ deshabilitar visualmente
-
-                        const url = "https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1";
-                        const payload = {
-                            id: USER_ID,
-                            text: text,
-                            tipo: "texto",
-                        };
-
-                        const response = await fetch(url, {
-                            method: "POST",
-                            headers: {
-                                "Content-Type": "application/json"
-                            },
-                            body: JSON.stringify(payload)
-                        });
-
-                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
-                        const result = await response.json();
-
-                        // Mostrar respuesta textual (respuesta o response)
-                        const mensaje = result.respuesta || result.response;
-                        if (mensaje) {
-                            head.speakText(mensaje);
-                            addMessage(mensaje, 'assistant');
-                            setTimeout(() => {
-                                isSpeaking = false;
-                                nodeSpeak.disabled = false;
-                            }, 4000); // espera 4 segundos como tiempo estimado
-
-                        } else {
-                            addMessage("Respuesta vacía o inesperada.", 'assistant');
-                            isSpeaking = false; // ✅ desbloquear si no hay respuesta
-                            nodeSpeak.disabled = false;
-                        }
-
-                        // Ejecutar gestos / animaciones si hay datos de avatar
-                        if (result.motion) {
-                            console.log("Avatar recibido:", result.motion); // ✅ Verifica contenido
-                            const { action, stillpose, gesture, mood } = result.motion;
-                            motion(action, stillpose, gesture, mood);
-                        }
-
-                    } else {
+                    if (!text) {
                         alert("Por favor ingresa un mensaje.");
+                        return;
                     }
+
+                    addMessage(text, 'user');
+                    textInput.value = '';
+                    isSpeaking = true;
+                    nodeSpeak.disabled = true;
+                    micButton.disabled = true;
+                    const payload = {
+                        id: USER_ID,
+                        text: text,
+                        tipo: "texto",
+                    };
+
+                    const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
+                    const result = await response.json();
+                    procesarRespuestaAgente(result);
 
                 } catch (error) {
                     console.error("Error:", error);
                     addMessage("Ocurrió un error al conectar con el servidor.", 'assistant');
-                    isSpeaking = false; // ✅ desbloquear en caso de error
+                    isSpeaking = false;
                     nodeSpeak.disabled = false;
+                    micButton.disabled = false;
                 }
             }
 
@@ -312,7 +297,6 @@
             // micrófono
 
             document.getElementById('mic-button').addEventListener('click', async () => {
-                const micButton = document.getElementById('mic-button');
 
                 if (mediaRecorder && mediaRecorder.state === 'recording') {
                     playBeep(600); // beep de parada
@@ -337,49 +321,42 @@
 
                     mediaRecorder.onstop = async () => {
                         micButton.classList.remove('active');
-                        stopMicTimer(); // 🔴 detener contador
+                        stopMicTimer();
 
                         const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
                         const audioUrl = URL.createObjectURL(audioBlob);
 
-                        // ✅ Detener completamente el micrófono
                         mediaRecorder.stream.getTracks().forEach(track => track.stop());
 
-                        // Mostrar el audio en el chat
                         addAudioMessage(audioUrl, 'user');
 
-                        // Enviar al webhook como archivo
                         const formData = new FormData();
                         formData.append('id', USER_ID);
                         formData.append('tipo', 'audio');
                         formData.append('file', audioBlob, 'nota.webm');
 
                         micButton.disabled = true;
+                        nodeSpeak.disabled = true;
                         isSpeaking = true;
 
-                        const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
-                            method: 'POST',
-                            body: formData
-                        });
+                        try {
+                            const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
+                                method: 'POST',
+                                body: formData
+                            });
 
-                        const result = await response.json();
-                        const mensaje = result.respuesta || result.response;
-                        if (mensaje) {
-                            head.speakText(mensaje);
-                            addMessage(mensaje, 'assistant');
-                        }
+                            const result = await response.json();
+                            procesarRespuestaAgente(result);
 
-                        if (result.motion) {
-                            const { action, stillpose, gesture, mood } = result.motion;
-                            motion(action, stillpose, gesture, mood);
-                        }
-
-                        // ✅ Reactivar el botón después de 4 segundos (igual que el de enviar)
-                        setTimeout(() => {
+                        } catch (error) {
+                            console.error("Error:", error);
+                            addMessage("Ocurrió un error al conectar con el servidor.", 'assistant');
                             isSpeaking = false;
                             micButton.disabled = false;
-                        }, 4000);
+                            nodeSpeak.disabled = false;
+                        }
                     };
+
 
                     mediaRecorder.start();
                 } catch (err) {
@@ -448,6 +425,25 @@
                 const min = String(Math.floor(seconds / 60)).padStart(2, '0');
                 const sec = String(seconds % 60).padStart(2, '0');
                 return `⏱ ${min}:${sec}`;
+            }
+            function procesarRespuestaAgente(result) {
+                const mensaje = result.respuesta || result.response;
+
+                if (mensaje) {
+                    head.speakText(mensaje);
+                    addMessage(mensaje, 'assistant');
+                }
+
+                if (result.motion) {
+                    const { action, stillpose, gesture, mood } = result.motion;
+                    motion(action, stillpose, gesture, mood);
+                }
+
+                setTimeout(() => {
+                    isSpeaking = false;
+                    nodeSpeak.disabled = false;
+                    micButton.disabled = false;
+                }, 4000); // espera 4 segundos como tiempo estimado
             }
 
 
