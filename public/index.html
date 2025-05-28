@@ -10,10 +10,12 @@
     <link rel="icon" type="image/png" href="favicon.png">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta charset="UTF-8">
-    <meta name="description" content="AulaViva es un asistente virtual que utiliza inteligencia artificial para interactuar con los usuarios.">
-    <meta name="keywords" content="AulaViva, asistente virtual, inteligencia artificial, IA, chatbot, OpenAI, Google TTS">
+    <meta name="description"
+        content="AulaViva es un asistente virtual que utiliza inteligencia artificial para interactuar con los usuarios.">
+    <meta name="keywords"
+        content="AulaViva, asistente virtual, inteligencia artificial, IA, chatbot, OpenAI, Google TTS">
     <meta name="author" content="Nomaddi SAS Team">
-    
+
 
     <script type="importmap">
   { "imports":
@@ -50,9 +52,23 @@
         // micrófono
         let mediaRecorder;
         let audioChunks = [];
-        // usuario
-        const USER_ID = 2;
+        // id usuario
+        let USER_ID = 2;
+        //nombre usuario
+        let USER_NAME = "Estudiante";
 
+        let USER_INFO = {};
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== "http://127.0.0.1:5500") return; // Cambia esto por tu dominio real en producción
+
+            if (event.data.userId) {
+                USER_ID = event.data.userId;
+                USER_INFO = event.data;
+                USER_NAME = event.data.userName || "Estudiante";
+                console.log("USER_ID recibido por postMessage:", USER_ID);
+            }
+        });
 
 
         // Get JSON Web Token
@@ -233,6 +249,7 @@
                     micButton.disabled = true;
                     const payload = {
                         id: USER_ID,
+                        userName: USER_NAME,
                         text: text,
                         tipo: "texto",
                     };
@@ -332,6 +349,7 @@
 
                         const formData = new FormData();
                         formData.append('id', USER_ID);
+                        formData.append('userName', USER_NAME);
                         formData.append('tipo', 'audio');
                         formData.append('file', audioBlob, 'nota.webm');
 

@@ -55,6 +55,7 @@ body {
   padding: 8px 12px;
   margin-bottom: 8px;
   border-radius: 20px;
+  width: 100%;
   max-width: 70%;
   word-wrap: break-word;
   font-size: 1rem;
@@ -76,11 +77,17 @@ body {
 }
 
 .message audio {
+  width: -webkit-fill-available;
+  width: -moz-available;
+  width: fill-available;
   max-width: 100%;
-  width: 100%;
   height: 32px;
   border-radius: 10px;
+  background-color: #333;
+  border: 1px solid #666;
 }
+
+
 
 
 /* Controles para enviar mensaje */

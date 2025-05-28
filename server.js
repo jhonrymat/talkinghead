@@ -12,19 +12,22 @@ const OPENAI_KEY = process.env.OPENAI_KEY;
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const ELEVEN_KEY = process.env.ELEVEN_KEY;
 const path = require('path');
+const cors = require('cors');
 
-// Middleware para verificar JWT
-function verifyJWT(req, res, next) {
-  const authHeader = req.headers.authorization;
-  if (!authHeader) return res.status(401).send('Token requerido');
-  const token = authHeader.split(' ')[1];
-  try {
-    jwt.verify(token, JWT_SECRET);
-    next();
-  } catch (err) {
-    res.status(403).send('Token inválido o expirado');
-  }
-}
+
+
+app.use(cors({
+  origin: 'http://127.0.0.1:5500', // ✅ ajusta en producción
+  methods: ['GET', 'POST'],
+  allowedHeaders: ['Content-Type']
+}));
+
+app.use((req, res, next) => {
+  console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
+  next();
+});
+
+
 
 // Endpoint que genera un JWT válido por 10 minutos
 app.get('/api/jwt', (req, res) => {
@@ -32,17 +35,8 @@ app.get('/api/jwt', (req, res) => {
   res.json({ jwt: token });
 });
 
-// Proxy a OpenAI
-app.use('/openai', verifyJWT, createProxyMiddleware({
-  target: 'https://api.openai.com',
-  changeOrigin: true,
-  pathRewrite: { '^/openai': '' },
-  onProxyReq: (proxyReq) => {
-    proxyReq.setHeader('Authorization', `Bearer ${OPENAI_KEY}`);
-  }
-}));
 
-
+// Proxy para Google TTS
 app.use('/gtts', createProxyMiddleware({
   target: 'https://texttospeech.googleapis.com',
   changeOrigin: true,
@@ -51,18 +45,6 @@ app.use('/gtts', createProxyMiddleware({
     const url = proxyReq.path + `?key=${GOOGLE_TTS_KEY}`;
     proxyReq.path = url;
     proxyReq.removeHeader('Authorization');
-  }
-}));
-
-
-// Proxy a ElevenLabs WebSocket
-app.use('/elevenlabs', verifyJWT, createProxyMiddleware({
-  target: 'wss://api.elevenlabs.io',
-  changeOrigin: true,
-  ws: true,
-  pathRewrite: { '^/elevenlabs': '' },
-  onProxyReq: (proxyReq) => {
-    proxyReq.setHeader('xi-api-key', ELEVEN_KEY);
   }
 }));
 
