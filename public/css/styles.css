@@ -11,8 +11,11 @@ body {
 
 #container {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   max-width: 100vw;
+  background-color: #202020;
+  font-family: Arial, sans-serif;
 }
 
 /* Avatar a la izquierda */
@@ -25,42 +28,53 @@ body {
 
 /* Contenedor del chat */
 #chat-container {
-  flex: 1;
   display: flex;
   flex-direction: column;
   padding: 10px;
   box-sizing: border-box;
   position: relative;
   background: #282828;
-  height: 100vh;
+  height: 100%;
+  overflow: hidden;
 }
+
 
 /* Área para mostrar mensajes */
 #messages {
   flex: 1;
-  /* para que crezca y tome todo el espacio disponible */
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 10px;
-  padding-bottom: 80px;
-  /* NUEVO: espacio para el textarea y botones */
   background-color: #1a1a1a;
   border-radius: 8px;
   display: flex;
   flex-direction: column;
-  margin-bottom: 10px;
-  /* espacio para que no quede pegado al controls */
+  gap: 8px;
 }
 
+
 .message {
+  display: inline-block;
+  max-width: 85%;
   padding: 8px 12px;
-  margin-bottom: 8px;
   border-radius: 20px;
-  width: 100%;
-  max-width: 70%;
-  word-wrap: break-word;
-  font-size: 1rem;
+  font-size: 0.9rem;
   line-height: 1.3;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+  box-sizing: border-box;
 }
+
+.message audio {
+  max-width: 100%;
+  height: 32px;
+  border-radius: 10px;
+  border: 1px solid #666;
+  box-sizing: border-box;
+}
+
+
 
 .message.user {
   background-color: #0078d7;
@@ -76,16 +90,6 @@ body {
   border-bottom-left-radius: 0;
 }
 
-.message audio {
-  width: -webkit-fill-available;
-  width: -moz-available;
-  width: fill-available;
-  max-width: 100%;
-  height: 32px;
-  border-radius: 10px;
-  background-color: #333;
-  border: 1px solid #666;
-}
 
 
 /* Controles para enviar mensaje */
@@ -227,36 +231,61 @@ button:disabled {
   /* Este display se cambia a 'block' dinámicamente */
 }
 
+#avatar-name {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+#avatar-container {
+  background: #111;
+  height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+
+/* Scroll personalizado para WebKit (Chrome, Edge, Safari) */
+#messages::-webkit-scrollbar {
+  width: 8px;
+}
+
+#messages::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  /* mismo fondo del contenedor */
+}
+
+#messages::-webkit-scrollbar-thumb {
+  background-color: #444;
+  /* color del scroll */
+  border-radius: 4px;
+  border: 1px solid #282828;
+  /* efecto suave con contraste */
+}
+
+#messages::-webkit-scrollbar-thumb:hover {
+  background-color: #666;
+  /* al pasar el mouse */
+}
+
+/* Firefox */
+#messages {
+  scrollbar-width: thin;
+  scrollbar-color: #444 #1a1a1a;
+}
+
+
 /* Responsive para móviles: avatar arriba, chat abajo */
 @media (max-width: 768px) {
-  #container {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    background-color: #202020;
-    font-family: Arial, sans-serif;
-  }
-
-  #avatar-container {
-    background: #111;
-    height: 230px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;
-  }
-
-  #avatar-name {
-    position: absolute;
-    top: 8px;
-    left: 16px;
-    color: #fff;
-    font-size: 1rem;
-    font-weight: bold;
-  }
 
 
-  #chat-container {
+
+  /* #chat-container {
     flex: 1;
     display: flex;
     flex-direction: column;
@@ -272,41 +301,7 @@ button:disabled {
     background-color: #1a1a1a;
     border-radius: 8px;
     margin-bottom: 10px;
-  }
-
-  .message {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    border-radius: 20px;
-    max-width: 70%;
-    font-size: 0.95rem;
-    line-height: 1.4;
-    word-wrap: break-word;
-  }
-
-  .message.user {
-    background-color: #0078d7;
-    color: white;
-    align-self: flex-end;
-    border-bottom-right-radius: 0;
-  }
-
-  .message.assistant {
-    background-color: #444;
-    color: white;
-    align-self: flex-start;
-    border-bottom-left-radius: 0;
-  }
-
-  .message audio {
-    width: 100%;
-    max-width: 100%;
-    height: 32px;
-    border-radius: 10px;
-    background-color: #333;
-    border: 1px solid #666;
-  }
-
+  } */
 
   #controls {
     display: flex;

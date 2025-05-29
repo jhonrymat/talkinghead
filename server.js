@@ -22,10 +22,10 @@ app.use(cors({
   allowedHeaders: ['Content-Type']
 }));
 
-app.use((req, res, next) => {
-  console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
-  next();
-});
+// app.use((req, res, next) => {
+//   console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
+//   next();
+// });
 
 
 
