@@ -254,6 +254,9 @@
                         tipo: "texto",
                     };
 
+                    // Mostrar indicador de escritura
+                    mostrarTyping();
+
                     const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
@@ -351,6 +354,7 @@
                         micButton.disabled = true;
                         nodeSpeak.disabled = true;
                         isSpeaking = true;
+                        mostrarTyping(); // Mostrar indicador de escritura
 
                         try {
                             const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
@@ -373,8 +377,8 @@
 
                     mediaRecorder.start();
                 } catch (err) {
-                    alert("No se pudo acceder al micrófono.");
                     console.error(err);
+                    addMessage("⚠️ No se pudo activar el micrófono. Por favor revisa los permisos del navegador.", 'assistant');
                 }
             });
 
@@ -439,6 +443,26 @@
                 const sec = String(seconds % 60).padStart(2, '0');
                 return `⏱ ${min}:${sec}`;
             }
+
+            function mostrarTyping() {
+                if (!document.getElementById("typing-indicator")) {
+                    const typingEl = document.createElement("div");
+                    typingEl.id = "typing-indicator";
+                    typingEl.className = "message assistant";
+                    typingEl.style.fontStyle = "italic";
+                    typingEl.innerText = "Escribiendo...";
+                    const messagesContainer = document.getElementById("messages");
+                    messagesContainer.appendChild(typingEl);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+
+            function ocultarTyping() {
+                const typingEl = document.getElementById("typing-indicator");
+                if (typingEl) typingEl.remove();
+            }
+
+
             function procesarRespuestaAgente(result) {
                 const mensaje = result.respuesta || result.response;
 
@@ -452,13 +476,16 @@
                     motion(action, stillpose, gesture, mood);
                 }
 
+                // Ocultar indicador de escritura
+                ocultarTyping();
+
                 setTimeout(() => {
                     isSpeaking = false;
                     nodeSpeak.disabled = false;
                     micButton.disabled = false;
                 }, 4000); // espera 4 segundos como tiempo estimado
             }
-        
+
         });
 
 
@@ -467,7 +494,7 @@
 </head>
 
 <body>
-    <div id="container">        
+    <div id="container">
         <div id="loading">
             <div id="loading-back"></div>
             <div id="loading-top"></div>
