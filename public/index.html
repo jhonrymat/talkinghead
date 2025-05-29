@@ -35,40 +35,27 @@
 
         // API proxys
         const jwtEndpoint = "/api/jwt"; // Get JSON Web Token for Single Sign-On
-        const openaiChatCompletionsProxy = "/openai/v1/chat/completions";
-        const openaiModerationsProxy = "/openai/v1/moderations";
-        const openaiAudioTranscriptionsProxy = "/openai/v1/audio/transcriptions";
         const googleTTSProxy = "/gtts/";
 
         // variables
-        let head;
-        let progressTimeout;
+        let jwt = '';
         // JSON Web Token (JWT)
         let jwtExpires = 0;
-        let jwt = '';
-        // Con esta variable se controla el estado del boton enviar
-        // y el micrófono
-        let isSpeaking = false;
-        // micrófono
+        let head;
         let mediaRecorder;
+        let progressTimeout;
+        // micrófono
         let audioChunks = [];
+        // Con esta variable se controla el estado del boton enviar
+        let isSpeaking = false;
+
         // id usuario
         let USER_ID = 2;
         //nombre usuario
         let USER_NAME = "Estudiante";
-
         let USER_INFO = {};
 
-        window.addEventListener("message", (event) => {
-            if (event.origin !== "http://127.0.0.1:5500") return; // Cambia esto por tu dominio real en producción
 
-            if (event.data.userId) {
-                USER_ID = event.data.userId;
-                USER_INFO = event.data;
-                USER_NAME = event.data.userName || "Estudiante";
-                console.log("USER_ID recibido por postMessage:", USER_ID);
-            }
-        });
 
 
         // Get JSON Web Token
@@ -77,27 +64,33 @@
             if (jwtExpires < limit) {
                 try {
                     const o = await (await fetch(jwtEndpoint, { cache: "no-store" })).json();
-                    if (o && o.jwt) {
-                        const b64Url = o.jwt.split('.')[1];
-                        const b64 = b64Url.replace(/-/g, '+').replace(/_/g, '/');
-                        const s = decodeURIComponent(window.atob(b64).split('').map((c) => {
-                            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-                        }).join(''));
+                    if (o?.jwt) {
+                        const b64 = o.jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                        const s = decodeURIComponent(atob(b64).split('').map(c => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`).join(''));
                         const p = JSON.parse(s);
-                        jwtExpires = (p && p.exp) ? p.exp : 0;
                         jwt = o.jwt;
+                        jwtExpires = p?.exp || 0;
                     } else {
                         jwt = '';
                         jwtExpires = 0;
                     }
                 } catch (e) {
                     console.error(e);
-                    jwt = '';
-                    jwtExpires = 0;
                 }
             }
             return jwt.slice();
         }
+
+        window.addEventListener("message", (event) => {
+            if (event.origin !== "http://127.0.0.1:5500") return; // Cambia esto por tu dominio real en producción
+
+            if (event.data.userId) {
+                USER_ID = event.data.userId;
+                USER_INFO = event.data;
+                USER_NAME = event.data.userName || "Estudiante";
+                console.log("USER_ID recibido: ", USER_ID);
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', async function (e) {
 
@@ -105,8 +98,14 @@
             // NOTE: Never put your API key in a client-side code unless you know
             //       that you are the only one to have access to that code!
             const nodeAvatar = document.getElementById('avatar');
+            // Load and show the avatar
+            const nodeLoading = document.getElementById('loading');
+            const nodeSpeak = document.getElementById('speak');
+            const textInput = document.getElementById('text');
+            const micButton = document.getElementById('mic-button');
+
             head = new TalkingHead(nodeAvatar, {
-                jwtGet: jwtGet,
+                jwtGet,
                 ttsEndpoint: googleTTSProxy,
                 cameraZoomEnable: true,
                 cameraPanEnable: true,
@@ -120,157 +119,77 @@
                 ttsVolume: 1.0,
             });
 
-            let morphTimer = null;
-
-
-            function errorShow(error) {
-                console.error(error);
-            }
-            // Load and show the avatar
-            const nodeLoading = document.getElementById('loading');
-            try {
-                // Get token
-                jwt = await jwtGet();
-                // Show last avatar
-                // Show last avatar
-                let o = {};
-                let name = Object.values(site.avatars)[0].name;
-
-                if (site.avatars.hasOwnProperty(name)) {
-                    o = site.avatars[name];
-                } else {
-                    o = Object.values(site.avatars)[0];
+            async function loadAvatar() {
+                try {
+                    jwt = await jwtGet();
+                    let config = Object.values(site.avatars)[0];
+                    if (site.avatars.hasOwnProperty(config.name)) config = site.avatars[config.name];
+                    await head.showAvatar(config, progressUpdate);
+                } catch (error) {
+                    console.error(error);
+                    await head.showAvatar(Object.values(site.avatars)[0], progressUpdate);
                 }
-                await head.showAvatar(o, progressUpdate);
-
-                // ttsLang: "es-ES",
-                //     ttsVoice: "es-ES-Standard-A",
-                //     lipsyncLang: 'es'
-                // Set the avatar
-
-            } catch (error) {
-                errorShow(error);
-
-                // Backup plan: show the first avatar in site config
-                await head.showAvatar(Object.values(site.avatars)[0], progressUpdate);
             }
 
-
-
-            const nodeSpeak = document.getElementById('speak');
-            const textInput = document.getElementById('text');
-            const micButton = document.getElementById('mic-button');
-
-
-            nodeSpeak.addEventListener('click', sendMessage);
-
-            textInput.addEventListener('keydown', function (event) {
-                if (event.key === 'Enter' && !event.shiftKey) {
-                    event.preventDefault();
-                    if (!isSpeaking) {
-                        sendMessage();
-                    }
-                }
-            });
 
             // Update progress bar
             function progressUpdate(ev) {
-                const loading = document.getElementById("loading");
                 const loadingTop = document.getElementById("loading-top");
-                const loadingValueElements = document.querySelectorAll("#loading-value");
+                const loadingValues = document.querySelectorAll("#loading-value");
+                if (!nodeLoading || !loadingTop) return;
 
-                if (!loading || !loadingTop) {
-                    console.warn("Elementos #loading o #loading-top no encontrados.");
-                    return;
-                }
-
-
-                if (progressTimeout) {
-                    clearTimeout(progressTimeout);
-                    progressTimeout = null;
-                } else {
-                    loading.style.display = "block";
-                }
+                if (progressTimeout) clearTimeout(progressTimeout);
+                else nodeLoading.style.display = "block";
 
                 let hideMs = 1000;
-
                 if (ev.lengthComputable) {
                     const val = Math.min(100, Math.round((ev.loaded / ev.total) * 100));
                     loadingTop.style.clipPath = `inset(0 ${100 - val}% 0 0)`;
-
-                    loadingValueElements.forEach(el => {
-                        el.textContent = val + "%";
-                    });
-
+                    loadingValues.forEach(el => el.textContent = `${val}%`);
                     if (val < 100) hideMs = 3000;
                 } else {
                     loadingTop.style.clipPath = "inset(0 0 0 0)";
-                    loadingValueElements.forEach(el => {
-                        el.textContent = "" + ev.loaded;
-                    });
+                    loadingValues.forEach(el => el.textContent = `${ev.loaded}`);
                 }
 
                 progressTimeout = setTimeout(() => {
-                    loading.style.display = "none";
+                    nodeLoading.style.display = "none";
                     progressTimeout = null;
                 }, hideMs);
             }
 
 
-            function motion(action, pose, gesture, mood) {
-                try {
-                    head.setMood(mood || 'neutral');
-                } catch (err) { }
-                if (gesture && site.gestures[gesture]) {
-                    head.playGesture(site.gestures[gesture].name);
+            nodeSpeak.addEventListener("click", sendMessage);
+            textInput.addEventListener("keydown", (e) => {
+                if (e.key === "Enter" && !e.shiftKey && !isSpeaking) {
+                    e.preventDefault();
+                    sendMessage();
                 }
-                if (action && site.animations[action]) {
-                    head.playAnimation(site.animations[action].url, progressUpdate, site.animations[action].dur || 20);
-                } else if (pose && site.poses[pose]) {
-                    head.playPose(site.poses[pose].url, progressUpdate, site.poses[pose].dur || 60);
-                }
-            }
+            });
+
 
             async function sendMessage() {
                 if (isSpeaking) return;
+                const text = textInput.value.trim();
+                if (!text) return alert("Por favor ingresa un mensaje.");
+                addMessage(text, "user");
+                textInput.value = '';
+                isSpeaking = true;
+                nodeSpeak.disabled = true;
+                micButton.disabled = true;
+                mostrarTyping();
 
-                try {
-                    const text = textInput.value.trim();
+                const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ id: USER_ID, userName: USER_NAME, text, tipo: "texto" }),
+                });
 
-                    if (!text) {
-                        alert("Por favor ingresa un mensaje.");
-                        return;
-                    }
-
-                    addMessage(text, 'user');
-                    textInput.value = '';
-                    isSpeaking = true;
-                    nodeSpeak.disabled = true;
-                    micButton.disabled = true;
-                    const payload = {
-                        id: USER_ID,
-                        userName: USER_NAME,
-                        text: text,
-                        tipo: "texto",
-                    };
-
-                    // Mostrar indicador de escritura
-                    mostrarTyping();
-
-                    const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
-
+                if (response.ok) {
                     const result = await response.json();
                     procesarRespuestaAgente(result);
-
-                } catch (error) {
-                    console.error("Error:", error);
-                    addMessage("Ocurrió un error al conectar con el servidor.", 'assistant');
+                } else {
+                    addMessage("Ocurrió un error al conectar con el servidor.", "assistant");
                     isSpeaking = false;
                     nodeSpeak.disabled = false;
                     micButton.disabled = false;
@@ -283,34 +202,77 @@
             function addMessage(text, sender = 'user') {
                 const messageEl = document.createElement('div');
                 messageEl.classList.add('message', sender);
-
-                if (sender === 'assistant') {
-                    // Procesa con marked (markdown a HTML)
-                    messageEl.innerHTML = marked.parse(text);
-                } else {
-                    // El usuario no necesita formato markdown (opcional)
-                    messageEl.textContent = text;
-                }
-
+                messageEl.innerHTML = sender === 'assistant' ? marked.parse(text) : text;
                 const messagesContainer = document.getElementById('messages');
                 messagesContainer.appendChild(messageEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
 
+            function mostrarTyping() {
+                if (!document.getElementById("typing-indicator")) {
+                    const typingEl = document.createElement("div");
+                    typingEl.id = "typing-indicator";
+                    typingEl.className = "message assistant";
+                    typingEl.style.fontStyle = "italic";
+                    typingEl.innerText = "Escribiendo...";
+                    const messagesContainer = document.getElementById("messages");
+                    messagesContainer.appendChild(typingEl);
+                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                }
+            }
+
+            function ocultarTyping() {
+                const typingEl = document.getElementById("typing-indicator");
+                if (typingEl) typingEl.remove();
+            }
+
+
+            function motion(action, pose, gesture, mood) {
+                try { head.setMood(mood || 'neutral'); } catch (err) { }
+                if (gesture && site.gestures[gesture]) { head.playGesture(site.gestures[gesture].name); }
+                if (action && site.animations[action]) {
+                    head.playAnimation(site.animations[action].url, progressUpdate, site.animations[action].dur || 20);
+                } else if (pose && site.poses[pose]) {
+                    head.playPose(site.poses[pose].url, progressUpdate, site.poses[pose].dur || 60);
+                }
+            }
+
+
+            function procesarRespuestaAgente(result) {
+                const mensaje = result.respuesta || result.response;
+                if (mensaje) {
+                    head.speakText(mensaje);
+                    addMessage(mensaje, 'assistant');
+                }
+                if (result.motion) {
+                    const { action, stillpose, gesture, mood } = result.motion;
+                    motion(action, stillpose, gesture, mood);
+                }
+                // Ocultar indicador de escritura
+                ocultarTyping();
+
+                setTimeout(() => {
+                    isSpeaking = false;
+                    nodeSpeak.disabled = false;
+                    micButton.disabled = false;
+                }, 4000); // espera 4 segundos como tiempo estimado
+            }
 
             // Pause animation when document is not visible
-            document.addEventListener("visibilitychange", async function (ev) {
-                if (document.visibilityState === "visible") {
-                    head.start();
-                } else {
-                    head.stop();
-                }
+            document.addEventListener("visibilitychange", () => {
+                if (document.visibilityState === "visible") head.start();
+                else head.stop();
             });
 
 
 
-            // micrófono
 
+
+            function errorShow(error) {
+                console.error(error);
+            }
+
+            // micrófono
             document.getElementById('mic-button').addEventListener('click', async () => {
 
                 if (mediaRecorder && mediaRecorder.state === 'recording') {
@@ -396,8 +358,8 @@
                 messagesContainer.appendChild(messageEl);
                 messagesContainer.scrollTop = messagesContainer.scrollHeight;
             }
-            // Función para reproducir un beep
 
+            // Función para reproducir un beep
             function playBeep(freq = 1000, duration = 150, volume = 0.1) {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const osc = ctx.createOscillator();
@@ -444,47 +406,9 @@
                 return `⏱ ${min}:${sec}`;
             }
 
-            function mostrarTyping() {
-                if (!document.getElementById("typing-indicator")) {
-                    const typingEl = document.createElement("div");
-                    typingEl.id = "typing-indicator";
-                    typingEl.className = "message assistant";
-                    typingEl.style.fontStyle = "italic";
-                    typingEl.innerText = "Escribiendo...";
-                    const messagesContainer = document.getElementById("messages");
-                    messagesContainer.appendChild(typingEl);
-                    messagesContainer.scrollTop = messagesContainer.scrollHeight;
-                }
-            }
 
-            function ocultarTyping() {
-                const typingEl = document.getElementById("typing-indicator");
-                if (typingEl) typingEl.remove();
-            }
-
-
-            function procesarRespuestaAgente(result) {
-                const mensaje = result.respuesta || result.response;
-
-                if (mensaje) {
-                    head.speakText(mensaje);
-                    addMessage(mensaje, 'assistant');
-                }
-
-                if (result.motion) {
-                    const { action, stillpose, gesture, mood } = result.motion;
-                    motion(action, stillpose, gesture, mood);
-                }
-
-                // Ocultar indicador de escritura
-                ocultarTyping();
-
-                setTimeout(() => {
-                    isSpeaking = false;
-                    nodeSpeak.disabled = false;
-                    micButton.disabled = false;
-                }, 4000); // espera 4 segundos como tiempo estimado
-            }
+            // Llama al avatar
+            await loadAvatar();
 
         });
 
@@ -506,22 +430,16 @@
         </div>
 
         <div id="chat-container">
-
             <div id="messages">
             </div>
-
             <div id="controls">
                 <input type="text" id="text" placeholder="Escribe tu mensaje aquí..." />
                 <span id="mic-timer" style="display:none; margin-left: 10px; font-size: 14px; color: red;">⏱
                     00:00</span>
                 <button id="mic-button" class="circle-button mic">
-                    <svg viewBox="-2 -2 28 28" xmlns="http://www.w3.org/2000/svg">
-                        <path fill-rule="evenodd" clip-rule="evenodd"
-                            d="M9 4C9 2.34315 10.3431 1 12 1C13.6569 1 15 2.34315 15 4V12C15 13.6569 13.6569 15 12 15C10.3431 15 9 13.6569 9 12V4ZM13 4V12C13 12.5523 12.5523 13 12 13C11.4477 13 11 12.5523 11 12V4C11 3.44772 11.4477 3 12 3C12.5523 3 13 3.44772 13 4Z"
-                            fill="currentColor" />
-                        <path
-                            d="M18 12C18 14.973 15.8377 17.441 13 17.917V21H17V23H7V21H11V17.917C8.16229 17.441 6 14.973 6 12V9H8V12C8 14.2091 9.79086 16 12 16C14.2091 16 16 14.2091 16 12V9H18V12Z"
-                            fill="currentColor" />
+                    <svg viewBox="0 0 24 24" width="24" height="24">
+                        <path fill="currentColor"
+                            d="M12 14a3 3 0 0 0 3-3V5a3 3 0 0 0-6 0v6a3 3 0 0 0 3 3zm5-3a5 5 0 0 1-10 0H5a7 7 0 0 0 14 0h-2zm-5 9c-2.67 0-8 1.34-8 4h16c0-2.66-5.33-4-8-4z" />
                     </svg>
                 </button>
                 <button id="speak" class="circle-button send">
