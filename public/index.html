@@ -305,11 +305,6 @@
             });
 
 
-            textInput.addEventListener('input', () => {
-                textInput.style.height = 'auto'; // reset height
-                const maxHeight = parseFloat(getComputedStyle(textInput).lineHeight) * 4;
-                textInput.style.height = Math.min(textInput.scrollHeight, maxHeight) + "px";
-            });
 
             // micrófono
 
@@ -463,8 +458,7 @@
                     micButton.disabled = false;
                 }, 4000); // espera 4 segundos como tiempo estimado
             }
-
-
+        
         });
 
 
@@ -473,20 +467,24 @@
 </head>
 
 <body>
-    <div id="container">
+    <div id="container">        
         <div id="loading">
             <div id="loading-back"></div>
             <div id="loading-top"></div>
             <div id="loading-value"></div>
         </div>
-        <div id="avatar"></div>
+        <div id="avatar-container">
+            <span id="avatar-name">AulaViva</span>
+            <div id="avatar"></div>
+        </div>
 
         <div id="chat-container">
+
             <div id="messages">
             </div>
 
             <div id="controls">
-                <textarea id="text" rows="1" placeholder="Escribe tu mensaje aquí..."></textarea>
+                <input type="text" id="text" placeholder="Escribe tu mensaje aquí..." />
                 <span id="mic-timer" style="display:none; margin-left: 10px; font-size: 14px; color: red;">⏱
                     00:00</span>
                 <button id="mic-button" class="circle-button mic">

@@ -24,6 +24,7 @@
                         align-items: center;
                         z-index: 9999;
                         cursor: pointer;
+                        user-select: none; /* ⬅️ Agrega esto aquí */
                     `;
         btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.38 1.4 4.5 3.53 5.88L6 21l4.12-2.24c.6.1 1.22.16 1.88.16 4.97 0 9-3.58 9-8s-4.03-8-9-8z"/></svg>`;
 
@@ -49,13 +50,12 @@
 
         // Mostrar/Ocultar
         btn.addEventListener("click", () => {
-            iframe.style.display = "block";
-
-            // Enviar los datos de usuario al iframe
-            iframe.contentWindow.postMessage({
-                userId,
-                userName
-            }, "http://localhost:3000"); // ← Reemplaza por tu dominio
+            if (iframe.style.display === "none") {
+                iframe.style.display = "block";
+                iframe.contentWindow.postMessage({ userId, userName }, "http://localhost:3000");
+            } else {
+                iframe.style.display = "none";
+            }
         });
 
         // Escuchar para cerrarlo desde adentro si agregas botón 'X'
