@@ -1,6 +1,12 @@
 // Site configuration
 export const site = {
 
+  // Servidor URL Se debe ajustar en producción
+  // En desarrollo, se puede usar localhost
+  API_URL: "http://localhost:3000",
+  // websocket URL
+  API_WS: "https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1",
+
   // Preset avatars
   avatars: {
     'Profe Antoneta': {

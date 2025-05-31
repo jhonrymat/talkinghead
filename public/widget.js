@@ -1,9 +1,19 @@
 (function () {
   window.addEventListener("DOMContentLoaded", function () {
-    // Leer los datos del script tag
+    // Configuración del entorno
+    const API_URL = "http://localhost:3000"; // 🔁 Cambiar en producción
+    // Obtener los datos del <script>
     const script = document.currentScript || document.querySelector('script[src*="widget.js"]');
-    const userId = script?.dataset.user || "anonimo";
-    const userName = script?.dataset.name || "Estudiante";
+
+    // Obtener parámetros de la URL si existen
+    const urlParams = new URLSearchParams(window.location.search);
+    const paramUserId = urlParams.get("userId");
+    const paramUserName = urlParams.get("userName");
+
+    // Determinar userId y userName por prioridad: URL > data-* > valores por defecto
+    const userId = paramUserId || script?.dataset.user || "anonimo";
+    const userName = paramUserName || script?.dataset.name || "Estudiante";
+
 
     // Crear el botón flotante
     const btn = document.createElement("div");
@@ -30,7 +40,7 @@
     // Crear el iframe oculto
     const iframe = document.createElement("iframe");
     iframe.id = "aulaViva-frame";
-    iframe.src = "http://localhost:3000";
+    iframe.src = API_URL;
     iframe.allow = "microphone"; // ✅ Permitir micrófono en iframe
     iframe.style = `
       position: fixed;
@@ -60,7 +70,7 @@
         iframe.style.opacity = "1";
         iframe.style.transform = "translateY(0)";
         iframe.style.pointerEvents = "auto";
-        iframe.contentWindow.postMessage({ userId, userName }, "http://localhost:3000");
+        iframe.contentWindow.postMessage({ userId, userName }, API_URL);
       } else {
         iframe.style.opacity = "0";
         iframe.style.transform = "translateY(20px)";
@@ -72,7 +82,7 @@
 
     // Cierre desde el iframe (opcional)
     window.addEventListener("message", (e) => {
-      if (e.origin !== "http://localhost:3000") return;
+      if (e.origin !== API_URL) return;
       if (e.data === "close-aulaViva") {
         isOpen = false;
         iframe.style.opacity = "0";
