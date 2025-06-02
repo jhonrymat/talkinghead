@@ -193,7 +193,7 @@
                 micButton.disabled = true;
                 mostrarTyping();
 
-                const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
+                const response = await fetch(site.API_WS, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ id: USER_ID, userName: USER_NAME, text, tipo: "texto" }),
@@ -379,7 +379,7 @@
                         mostrarTyping();
 
                         try {
-                            const response = await fetch("https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1", {
+                            const response = await fetch(site.API_WS, {
                                 method: 'POST',
                                 body: formData
                             });

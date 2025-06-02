@@ -3,9 +3,11 @@ export const site = {
 
   // Servidor URL Se debe ajustar en producción
   // En desarrollo, se puede usar localhost
-  API_URL: "http://localhost:3000",
+  API_URL: window.location.hostname === "localhost"
+        ? "http://localhost:3000"
+        : `${window.location.protocol}//${window.location.host}`,
   // websocket URL
-  API_WS: "https://iawebhookss.agentesias.com/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1",
+  API_WS: "https://ssn8nss.maddigo.com.co/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1",
 
   // Preset avatars
   avatars: {

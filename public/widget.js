@@ -1,9 +1,12 @@
 (function () {
   window.addEventListener("DOMContentLoaded", function () {
     // Configuración del entorno
-    const API_URL = "http://localhost:3000"; // 🔁 Cambiar en producción
-    // Obtener los datos del <script>
+     // Obtener el script actual
     const script = document.currentScript || document.querySelector('script[src*="widget.js"]');
+
+    // Obtener la URL del backend desde el host del script
+    const backendURL = new URL(script.src);
+    const API_URL = backendURL.origin; // Ej: https://miapp.railway.app
 
     // Obtener parámetros de la URL si existen
     const urlParams = new URLSearchParams(window.location.search);
