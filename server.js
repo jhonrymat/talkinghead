@@ -10,16 +10,27 @@ const JWT_SECRET = process.env.JWT_SECRET;
 // const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const REFERER = process.env.REFERER || 'http://127.0.0.1:5500'; // Ajusta según tu entorno
+console.log(`Referer configurado: ${REFERER}`);
 const path = require('path');
 const cors = require('cors');
 
 
+const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [];
 
 app.use(cors({
-  origin: REFERER, // ✅ ajusta en producción
+  origin: function (origin, callback) {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS no permitido: ' + origin));
+    }
+  },
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));
+
 
 // app.use((req, res, next) => {
 //   console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
