@@ -50,12 +50,6 @@ app.use('/gtts', createProxyMiddleware({
   }
 }));
 
-app.get("/", (req, res) => {
-  res.send("Servidor activo");
-});
-
-
-
 
 app.use(express.static(path.join(__dirname, 'public')));
 
