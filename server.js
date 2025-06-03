@@ -9,8 +9,6 @@ const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 // const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
-const REFERER = process.env.REFERER || 'http://127.0.0.1:5500'; // Ajusta según tu entorno
-console.log(`Referer configurado: ${REFERER}`);
 const path = require('path');
 const cors = require('cors');
 
@@ -32,10 +30,10 @@ app.use(cors({
 }));
 
 
-// app.use((req, res, next) => {
-//   console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
-//   next();
-// });
+app.use((req, res, next) => {
+  console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
+  next();
+});
 
 // app.use((req, res, next) => {
 //   const referer = req.get("Referer") || "";
