@@ -1,5 +1,4 @@
 (function () {
-  window.addEventListener("DOMContentLoaded", function () {
     let userId = "anonimo";
     let API_URL = "https://talkinghead-production.up.railway.app"; // Valor por defecto
 
@@ -102,5 +101,4 @@
         iframe.style.pointerEvents = "none";
       }
     });
-  });
 })();
