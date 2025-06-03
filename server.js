@@ -7,17 +7,16 @@ const { createProxyMiddleware } = require('http-proxy-middleware');
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
-const OPENAI_KEY = process.env.OPENAI_KEY;
 // const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
-const ELEVEN_KEY = process.env.ELEVEN_KEY;
+const REFERER = process.env.REFERER || 'http://127.0.0.1:5500'; // Ajusta según tu entorno
 const path = require('path');
 const cors = require('cors');
 
 
 
 app.use(cors({
-  origin: 'http://127.0.0.1:5500', // ✅ ajusta en producción
+  origin: REFERER, // ✅ ajusta en producción
   methods: ['GET', 'POST'],
   allowedHeaders: ['Content-Type']
 }));

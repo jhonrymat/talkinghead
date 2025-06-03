@@ -11,11 +11,9 @@
     // Obtener parámetros de la URL si existen
     const urlParams = new URLSearchParams(window.location.search);
     const paramUserId = urlParams.get("userId");
-    const paramUserName = urlParams.get("userName");
 
     // Determinar userId y userName por prioridad: URL > data-* > valores por defecto
     const userId = paramUserId || script?.dataset.user || "anonimo";
-    const userName = paramUserName || script?.dataset.name || "Estudiante";
 
 
     // Crear el botón flotante
@@ -23,8 +21,8 @@
     btn.id = "aulaViva-btn";
     btn.style = `
       position: fixed;
-      bottom: 24px;
-      right: 24px;
+      bottom: 10px;
+      right: 65px;
       background: #0078d7;
       border-radius: 50%;
       width: 56px;
@@ -32,7 +30,7 @@
       display: flex;
       justify-content: center;
       align-items: center;
-      z-index: 9999;
+      z-index: 16;
       cursor: pointer;
       user-select: none;
       transition: transform 0.2s ease;
@@ -47,8 +45,8 @@
     iframe.allow = "microphone"; // ✅ Permitir micrófono en iframe
     iframe.style = `
       position: fixed;
-      bottom: 90px;
-      right: 24px;
+      bottom: 68px;
+      right: 10px;
       width: 360px;
       height: 580px;
       max-width: 90vw;
@@ -58,7 +56,7 @@
       opacity: 0;
       transform: translateY(20px);
       pointer-events: none;
-      z-index: 9998;
+      z-index: 1022;
       box-shadow: 0 8px 24px rgba(0,0,0,0.3);
       transition: all 0.3s ease;
     `;
@@ -73,7 +71,7 @@
         iframe.style.opacity = "1";
         iframe.style.transform = "translateY(0)";
         iframe.style.pointerEvents = "auto";
-        iframe.contentWindow.postMessage({ userId, userName }, API_URL);
+        iframe.contentWindow.postMessage({ userId }, API_URL);
       } else {
         iframe.style.opacity = "0";
         iframe.style.transform = "translateY(20px)";

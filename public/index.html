@@ -52,9 +52,6 @@
 
         // id usuario
         let USER_ID = 2;
-        //nombre usuario
-        let USER_NAME = "Estudiante";
-        let USER_INFO = {};
 
         // Server URL
         const apiUrl = site.API_URL || "http://localhost:3000";
@@ -87,12 +84,10 @@
         }
 
         window.addEventListener("message", (event) => {
-            if (event.origin !== "http://127.0.0.1:5500") return; // Cambia esto por tu dominio real en producción
+            if (event.origin !== "https://campusvirtual.edu.co") return; // Cambia esto por tu dominio real en producción
 
             if (event.data.userId) {
                 USER_ID = event.data.userId;
-                USER_INFO = event.data;
-                USER_NAME = event.data.userName || "Estudiante";
                 console.log("USER_ID recibido: ", USER_ID);
             }
         });
@@ -196,7 +191,7 @@
                 const response = await fetch(site.API_WS, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: USER_ID, userName: USER_NAME, text, tipo: "texto" }),
+                    body: JSON.stringify({ id: USER_ID, text, tipo: "texto" }),
                 });
 
                 if (response.ok) {
@@ -369,7 +364,6 @@
 
                         const formData = new FormData();
                         formData.append('id', USER_ID);
-                        formData.append('userName', USER_NAME);
                         formData.append('tipo', 'audio');
                         formData.append('file', audioBlob, 'nota.webm');
 
