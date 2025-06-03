@@ -54,6 +54,7 @@ app.use('/gtts', createProxyMiddleware({
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, () => {
-  console.log(`Servidor iniciado en http://localhost:${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Servidor iniciado en http://0.0.0.0:${PORT}`);
 });
+
