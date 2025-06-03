@@ -52,6 +52,7 @@
 
         // id usuario
         let USER_ID = 2;
+        let COURSE_ID =2; // Asignar un valor por defecto si no se proporciona
 
         // Server URL
         const apiUrl = site.API_URL || "http://localhost:3000";
@@ -84,11 +85,14 @@
         }
 
         window.addEventListener("message", (event) => {
-            if (event.origin !== "https://campusvirtual.edu.co") return; // Cambia esto por tu dominio real en producción
+            // if (event.origin !== "https://campusvirtual.edu.co") return; // Cambia esto por tu dominio real en producción
 
             if (event.data.userId) {
                 USER_ID = event.data.userId;
-                console.log("USER_ID recibido: ", USER_ID);
+                COURSE_ID = event.data.courseId; // Asignar un valor por defecto si no se proporciona
+
+                console.log("USER_ID recibido index: ", USER_ID);
+                console.log("COURSE_ID recibido index: ", COURSE_ID);
             }
         });
 
@@ -191,7 +195,7 @@
                 const response = await fetch(site.API_WS, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ id: USER_ID, text, tipo: "texto" }),
+                    body: JSON.stringify({ userId: USER_ID, courseId: COURSE_ID,text, tipo: "texto" }),
                 });
 
                 if (response.ok) {
@@ -363,7 +367,8 @@
                         addAudioMessage(tempAudioUrl, 'user');
 
                         const formData = new FormData();
-                        formData.append('id', USER_ID);
+                        formData.append('userId', USER_ID);
+                        formData.append('courseId', COURSE_ID);
                         formData.append('tipo', 'audio');
                         formData.append('file', audioBlob, 'nota.webm');
 
