@@ -12,7 +12,7 @@
     const userId = scriptSrc.searchParams.get("userId") || "anonimo";
     console.log("User ID:", userId);
 
-    const API_URL = backendURL.origin;
+    const API_URL = scriptSrc.origin;
 
 
     // Crear el botón flotante
