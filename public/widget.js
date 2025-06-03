@@ -5,14 +5,11 @@
     const script = document.currentScript || document.querySelector('script[src*="widget.js"]');
 
     // Obtener la URL del backend desde el host del script
-    const backendURL = new URL(script.src);
-    console.log("Backend URL:", backendURL);
-    const API_URL = backendURL.origin; // Ej: https://miapp.railway.app
-    console.log("API URL:", API_URL);
+    const scriptSrc = new URL(script.src);
+    console.log("Backend URL:", scriptSrc);
 
     // Obtener parámetros de la URL si existen
-    const urlParams = new URLSearchParams(window.location.search);
-    const userId = urlParams.get("userId") || "anonimo";
+    const userId = scriptSrc.searchParams.get("userId") || "anonimo";
     console.log("User ID:", userId);
 
 
