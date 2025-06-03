@@ -6,14 +6,14 @@
 
     // Obtener la URL del backend desde el host del script
     const backendURL = new URL(script.src);
+    console.log("Backend URL:", backendURL);
     const API_URL = backendURL.origin; // Ej: https://miapp.railway.app
+    console.log("API URL:", API_URL);
 
     // Obtener parámetros de la URL si existen
     const urlParams = new URLSearchParams(window.location.search);
-    const paramUserId = urlParams.get("userId");
-
-    // Determinar userId y userName por prioridad: URL > data-* > valores por defecto
-    const userId = paramUserId || script?.dataset.user || "anonimo";
+    const userId = urlParams.get("userId") || "anonimo";
+    console.log("User ID:", userId);
 
 
     // Crear el botón flotante

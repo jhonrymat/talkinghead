@@ -30,20 +30,6 @@ app.use(cors({
 }));
 
 
-app.use((req, res, next) => {
-  console.log(`Solicitud recibida desde: ${req.headers.origin || 'local'} → ${req.method} ${req.originalUrl}`);
-  next();
-});
-
-// app.use((req, res, next) => {
-//   const referer = req.get("Referer") || "";
-//   if (!referer.includes("http://localhost:3000")) {
-//     return res.status(403).send("Acceso no autorizado.");
-//   }
-//   next();
-// });
-
-
 
 // Endpoint que genera un JWT válido por 10 minutos
 app.get('/api/jwt', (req, res) => {
