@@ -1,18 +1,30 @@
 (function () {
   window.addEventListener("DOMContentLoaded", function () {
-    // Configuración del entorno
-     // Obtener el script actual
-    const script = document.currentScript || document.querySelector('script[src*="widget.js"]');
+    let userId = "anonimo";
+    let API_URL = "https://talkinghead-production.up.railway.app"; // Valor por defecto
 
-    // Obtener la URL del backend desde el host del script
-    const scriptSrc = new URL(script.src);
-    console.log("Backend URL:", scriptSrc);
+    try {
+      let script = document.currentScript;
 
-    // Obtener parámetros de la URL si existen
-    const userId = scriptSrc.searchParams.get("userId") || "anonimo";
-    console.log("User ID:", userId);
+      if (!script) {
+        const scripts = Array.from(document.getElementsByTagName('script'));
+        script = scripts.find(s => s.src && s.src.includes("widget.js") && s.src.includes("userId"));
+      }
 
-    const API_URL = scriptSrc.origin;
+      if (script) {
+        const scriptSrc = new URL(script.src);
+        userId = scriptSrc.searchParams.get("userId") || "anonimo";
+        API_URL = scriptSrc.origin;
+      } else {
+        console.warn("❗ No se encontró el script, intentando fallback desde location.search...");
+        const urlParams = new URLSearchParams(window.location.search);
+        userId = urlParams.get("userId") || "anonimo";
+      }
+    } catch (err) {
+      console.error("❌ Error obteniendo userId:", err);
+    }
+
+
 
 
     // Crear el botón flotante
