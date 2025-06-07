@@ -52,7 +52,8 @@
 
         // id usuario
         let USER_ID = 2;
-        let COURSE_ID =2; // Asignar un valor por defecto si no se proporciona
+        let COURSE_ID = 2; // Asignar un valor por defecto si no se proporciona
+        let IS_INITIAL_PROMPT = false; // 👈 declarar al inicio de tu script
 
         // Server URL
         const apiUrl = site.API_URL || "http://localhost:3000";
@@ -85,16 +86,44 @@
         }
 
         window.addEventListener("message", (event) => {
-            // if (event.origin !== "https://campusvirtual.edu.co") return; // Cambia esto por tu dominio real en producción
+            // ✅ Seguridad: reemplaza con tu dominio en producción
+            // if (event.origin !== "https://campusvirtual.edu.co") return;
 
-            if (event.data.userId) {
-                USER_ID = event.data.userId;
-                COURSE_ID = event.data.courseId; // Asignar un valor por defecto si no se proporciona
+            const { userId, courseId, initialPrompt } = event.data || {};
 
-                console.log("USER_ID recibido index: ", USER_ID);
-                console.log("COURSE_ID recibido index: ", COURSE_ID);
+            if (userId) {
+                USER_ID = userId;
+                COURSE_ID = courseId;
+                // ✅ Solo considera initialPrompt=true si no fue usado ya en esta sesión
+                IS_INITIAL_PROMPT = initialPrompt === true && sessionStorage.getItem('initialPromptSent') !== 'true';
+
+
+                console.log("[Iframe] Datos recibidos:", { userId, courseId, IS_INITIAL_PROMPT  });
+            }
+
+            if (IS_INITIAL_PROMPT) {
+                const defaultMessage = "Hola, ¿me ayudas a revisar si tengo actividades pendientes?";
+                const textInput = document.getElementById('text');
+
+                if (textInput) {
+                    textInput.value = defaultMessage;
+                    console.log("[Iframe] Enviando saludo automático:", defaultMessage);
+
+                    setTimeout(() => {
+                        if (typeof sendMessage === "function") {
+                            sendMessage();
+                        } else {
+                            console.warn("sendMessage no está disponible aún.");
+                        }
+                    }, 800);
+
+                } else {
+                    console.warn("[Iframe] No se encontró el campo de texto.");
+                }
             }
         });
+
+
 
         document.addEventListener('DOMContentLoaded', async function (e) {
 
@@ -195,7 +224,13 @@
                 const response = await fetch(site.API_WS, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ userId: USER_ID, courseId: COURSE_ID,text, tipo: "texto" }),
+                    body: JSON.stringify({
+                        userId: USER_ID,
+                        courseId: COURSE_ID,
+                        initialPrompt: IS_INITIAL_PROMPT,
+                        text,
+                        tipo: "texto"
+                    }),
                 });
 
                 if (response.ok) {
@@ -208,6 +243,8 @@
                     micButton.disabled = false;
                 }
             }
+
+            window.sendMessage = sendMessage; // 👈 solución clave
 
 
             // esta función se encarga de mostrar el texto en el chat
@@ -256,6 +293,16 @@
                 if (mensaje) {
                     head.speakText(mensaje);
                     addMessage(mensaje, 'assistant');
+                    // ✅ Enviar señal para abrir el chat automáticamente
+                    if (window.parent !== window) {
+                        window.parent.postMessage("open-aulaViva", "*");
+                    }
+                    if (IS_INITIAL_PROMPT) {
+                        IS_INITIAL_PROMPT = false;
+                        sessionStorage.setItem('initialPromptSent', 'true');
+                        console.log("[Iframe] Se desactiva initialPrompt tras la primera respuesta.");
+                    }
+
                 }
                 if (result.motion) {
                     const { action, stillpose, gesture, mood } = result.motion;

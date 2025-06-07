@@ -4,11 +4,13 @@
 
   const userId = scriptSrc.searchParams.get("userId") || "anonimo";
   const courseId = scriptSrc.searchParams.get("courseId") || null;
-
+  const initialPrompt = scriptSrc.searchParams.get("initialPrompt") === "true";
   // ✅ Esto obtiene el dominio base del servidor del widget:
   const API_URL = scriptSrc.origin;
 
-
+  console.log("[Widget] userId:", userId);
+  console.log("[Widget] courseId:", courseId);
+  console.log("[Widget] initialPrompt:", initialPrompt);
 
 
   // Crear el botón flotante
@@ -59,31 +61,50 @@
 
   let isOpen = false;
 
-  // Mostrar/Ocultar el iframe
+  function openChat() {
+    isOpen = true;
+    iframe.style.opacity = "1";
+    iframe.style.transform = "translateY(0)";
+    iframe.style.pointerEvents = "auto";
+  }
+
+  function closeChat() {
+    isOpen = false;
+    iframe.style.opacity = "0";
+    iframe.style.transform = "translateY(20px)";
+    iframe.style.pointerEvents = "none";
+  }
+
   function toggleChat() {
-    isOpen = !isOpen;
-    if (isOpen) {
-      iframe.style.opacity = "1";
-      iframe.style.transform = "translateY(0)";
-      iframe.style.pointerEvents = "auto";
-      iframe.contentWindow.postMessage({ userId, courseId }, API_URL);
-    } else {
-      iframe.style.opacity = "0";
-      iframe.style.transform = "translateY(20px)";
-      iframe.style.pointerEvents = "none";
-    }
+    isOpen ? closeChat() : openChat();
   }
 
   btn.addEventListener("click", toggleChat);
 
-  // Cierre desde el iframe (opcional)
+  // ✅ Esperar que el iframe cargue para enviar el mensaje, sin abrirlo todavía
+  iframe.onload = () => {
+    console.log("[Widget] Iframe cargado. Enviando mensaje...");
+    iframe.contentWindow.postMessage({
+      userId,
+      courseId,
+      initialPrompt
+    }, API_URL);
+  };
+
+  // Cierre externo opcional desde iframe
   window.addEventListener("message", (e) => {
     if (e.origin !== API_URL) return;
+
     if (e.data === "close-aulaViva") {
-      isOpen = false;
-      iframe.style.opacity = "0";
-      iframe.style.transform = "translateY(20px)";
-      iframe.style.pointerEvents = "none";
+      closeChat();
+    }
+
+    // 🔓 Abrir automáticamente si el agente responde
+    if (e.data === "open-aulaViva") {
+      if (!isOpen) {
+        console.log("[Widget] Recibido 'open-aulaViva'. Abriendo chat automáticamente.");
+        openChat();
+      }
     }
   });
 })();
