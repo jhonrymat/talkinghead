@@ -54,6 +54,7 @@
         let USER_ID = 2;
         let COURSE_ID = 2; // Asignar un valor por defecto si no se proporciona
         let IS_INITIAL_PROMPT = false; // 👈 declarar al inicio de tu script
+        let AGENTE_ID = 1; // ID del agente por defecto
 
         // Server URL
         const apiUrl = site.API_URL || "http://localhost:3000";
@@ -89,16 +90,17 @@
             // ✅ Seguridad: reemplaza con tu dominio en producción
             // if (event.origin !== "https://campusvirtual.edu.co") return;
 
-            const { userId, courseId, initialPrompt } = event.data || {};
+            const { userId, courseId, initialPrompt, agenteId } = event.data || {};
 
             if (userId) {
                 USER_ID = userId;
                 COURSE_ID = courseId;
                 // ✅ Solo considera initialPrompt=true si no fue usado ya en esta sesión
                 IS_INITIAL_PROMPT = initialPrompt === true && sessionStorage.getItem('initialPromptSent') !== 'true';
+                AGENTE_ID = agenteId; // Asignar AGENTE_ID si se proporciona
 
 
-                console.log("[Iframe] Datos recibidos:", { userId, courseId, IS_INITIAL_PROMPT  });
+                console.log("[Iframe] Datos recibidos:", { userId, courseId, IS_INITIAL_PROMPT, agenteId  });
             }
 
             if (IS_INITIAL_PROMPT) {
@@ -228,6 +230,7 @@
                         userId: USER_ID,
                         courseId: COURSE_ID,
                         initialPrompt: IS_INITIAL_PROMPT,
+                        agenteId: AGENTE_ID, // Enviar el ID del agente
                         text,
                         tipo: "texto"
                     }),
@@ -416,6 +419,8 @@
                         const formData = new FormData();
                         formData.append('userId', USER_ID);
                         formData.append('courseId', COURSE_ID);
+                        formData.append('initialPrompt', IS_INITIAL_PROMPT);
+                        formData.append('agenteId', AGENTE_ID); // Enviar el ID del agente
                         formData.append('tipo', 'audio');
                         formData.append('file', audioBlob, 'nota.webm');
 

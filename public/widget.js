@@ -4,6 +4,7 @@
 
   const userId = scriptSrc.searchParams.get("userId") || "anonimo";
   const courseId = scriptSrc.searchParams.get("courseId") || null;
+  const agenteId = scriptSrc.searchParams.get("token") || null;
   const initialPrompt = scriptSrc.searchParams.get("initialPrompt") === "true";
   // ✅ Esto obtiene el dominio base del servidor del widget:
   const API_URL = scriptSrc.origin;
@@ -11,6 +12,7 @@
   console.log("[Widget] userId:", userId);
   console.log("[Widget] courseId:", courseId);
   console.log("[Widget] initialPrompt:", initialPrompt);
+  console.log("[Widget] agenteId:", agenteId);
 
 
   // Crear el botón flotante
@@ -19,7 +21,7 @@
   btn.style = `
       position: fixed;
       bottom: 10px;
-      right: 65px;
+      right: 70px;
       background: #0078d7;
       border-radius: 50%;
       width: 56px;
@@ -45,7 +47,7 @@
       bottom: 68px;
       right: 10px;
       width: 360px;
-      height: 580px;
+      height: 555px;
       max-width: 90vw;
       border: none;
       border-radius: 16px;
@@ -87,7 +89,8 @@
     iframe.contentWindow.postMessage({
       userId,
       courseId,
-      initialPrompt
+      initialPrompt,
+      agenteId,
     }, API_URL);
   };
 
