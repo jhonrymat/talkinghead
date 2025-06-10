@@ -49,6 +49,8 @@
         let audioChunks = [];
         // Con esta variable se controla el estado del boton enviar
         let isSpeaking = false;
+        let CONFIG = {};
+
 
         // id usuario
         let USER_ID = 2;
@@ -56,75 +58,9 @@
         let IS_INITIAL_PROMPT = false; // 👈 declarar al inicio de tu script
         let AGENTE_ID = 1; // ID del agente por defecto
 
+
         // Server URL
         const apiUrl = site.API_URL || "http://localhost:3000";
-
-
-
-
-
-        // Get JSON Web Token
-        async function jwtGet() {
-            const limit = Math.round(Date.now() / 1000) + 60;
-            if (jwtExpires < limit) {
-                try {
-                    const o = await (await fetch(jwtEndpoint, { cache: "no-store" })).json();
-                    if (o?.jwt) {
-                        const b64 = o.jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-                        const s = decodeURIComponent(atob(b64).split('').map(c => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`).join(''));
-                        const p = JSON.parse(s);
-                        jwt = o.jwt;
-                        jwtExpires = p?.exp || 0;
-                    } else {
-                        jwt = '';
-                        jwtExpires = 0;
-                    }
-                } catch (e) {
-                    console.error(e);
-                }
-            }
-            return jwt.slice();
-        }
-
-        window.addEventListener("message", (event) => {
-            // ✅ Seguridad: reemplaza con tu dominio en producción
-            // if (event.origin !== "https://campusvirtual.edu.co") return;
-
-            const { userId, courseId, initialPrompt, agenteId } = event.data || {};
-
-            if (userId) {
-                USER_ID = userId;
-                COURSE_ID = courseId;
-                // ✅ Solo considera initialPrompt=true si no fue usado ya en esta sesión
-                IS_INITIAL_PROMPT = initialPrompt === true && sessionStorage.getItem('initialPromptSent') !== 'true';
-                AGENTE_ID = agenteId; // Asignar AGENTE_ID si se proporciona
-
-
-                console.log("[Iframe] Datos recibidos:", { userId, courseId, IS_INITIAL_PROMPT, agenteId  });
-            }
-
-            if (IS_INITIAL_PROMPT) {
-                const defaultMessage = "Hola, ¿me ayudas a revisar si tengo actividades pendientes?";
-                const textInput = document.getElementById('text');
-
-                if (textInput) {
-                    textInput.value = defaultMessage;
-                    console.log("[Iframe] Enviando saludo automático:", defaultMessage);
-
-                    setTimeout(() => {
-                        if (typeof sendMessage === "function") {
-                            sendMessage();
-                        } else {
-                            console.warn("sendMessage no está disponible aún.");
-                        }
-                    }, 800);
-
-                } else {
-                    console.warn("[Iframe] No se encontró el campo de texto.");
-                }
-            }
-        });
-
 
 
         document.addEventListener('DOMContentLoaded', async function (e) {
@@ -138,33 +74,154 @@
             const nodeSpeak = document.getElementById('speak');
             const textInput = document.getElementById('text');
             const micButton = document.getElementById('mic-button');
+            const avatarName = document.getElementById('avatar-name');
 
-            head = new TalkingHead(nodeAvatar, {
-                jwtGet,
-                ttsEndpoint: googleTTSProxy,
-                cameraZoomEnable: true,
-                cameraPanEnable: true,
-                cameraView: "upper",
-                avatarMood: 'neutral',
-                lipsyncModules: ["es"],
-                lipsyncLang: "es",
-                ttsVoice: "es-ES-Standard-A",
-                ttsRate: 1.0,
-                ttsPitch: 0,
-                ttsVolume: 1.0,
-            });
+
+            // Get JSON Web Token
+            async function jwtGet() {
+                const limit = Math.round(Date.now() / 1000) + 60;
+                if (jwtExpires < limit) {
+                    try {
+                        const o = await (await fetch(jwtEndpoint, { cache: "no-store" })).json();
+                        if (o?.jwt) {
+                            const b64 = o.jwt.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                            const s = decodeURIComponent(atob(b64).split('').map(c => `%${('00' + c.charCodeAt(0).toString(16)).slice(-2)}`).join(''));
+                            const p = JSON.parse(s);
+                            jwt = o.jwt;
+                            jwtExpires = p?.exp || 0;
+                        } else {
+                            jwt = '';
+                            jwtExpires = 0;
+                        }
+                    } catch (e) {
+                        console.error(e);
+                    }
+                }
+                return jwt.slice();
+            }
 
             async function loadAvatar() {
                 try {
                     jwt = await jwtGet();
-                    let config = Object.values(site.avatars)[0];
-                    if (site.avatars.hasOwnProperty(config.name)) config = site.avatars[config.name];
-                    await head.showAvatar(config, progressUpdate);
+
+                    // ✅ Verifica que haya configuración disponible
+                    if (!CONFIG || !CONFIG.avatar) {
+                        throw new Error("No se ha recibido configuración del agente.");
+                    }
+
+                    const config = {
+                        // url: `./avatars/${CONFIG.avatar}`, // Usa tu ruta correcta según dónde estén almacenados
+                        url: `https://models.readyplayer.me/${CONFIG.avatar}.glb?morphTargets=ARKit,Oculus+Visemes,mouthOpen,mouthSmile,eyesClosed,eyesLookUp,eyesLookDown&textureSizeLimit=1024&textureFormat=png`,
+                        body: "F",
+                        es: CONFIG.nombre,
+                        avatarMood: CONFIG.avatar_mood,
+                    };
+
+                    console.log("[Avatar] Configuración cargada:", config);
+
+                    await head.showAvatar(config);
                 } catch (error) {
-                    console.error(error);
-                    await head.showAvatar(Object.values(site.avatars)[0], progressUpdate);
+                    console.error("[Avatar] Error al cargar avatar. Usando predeterminado:", error);
+
+                    // Avatar de fallback
+                    const fallback = {
+                        avatarMood: 'angry',
+                        body: "F",
+                        es: 'profesor',
+                        url: './avatars/brunette.glb',
+                    };
+
+                    await head.showAvatar(fallback);
                 }
             }
+
+            window.addEventListener("message", (event) => {
+                // ✅ Seguridad: reemplaza con tu dominio en producción
+                // if (event.origin !== "https://campusvirtual.edu.co") return;
+
+                const {
+                    userId,
+                    courseId,
+                    initialPrompt,
+                    agenteId,
+                    idioma,
+                    nombre,
+                    voz,
+                    avatar,
+                    avatar_mood,
+                    saludo,
+                    color_boton,
+                    logo,
+                    tts_rate,
+                    tts_pitch,
+                    tts_volume
+                } = event.data || {};
+
+                if (userId) {
+                    USER_ID = userId;
+                    COURSE_ID = courseId;
+                    AGENTE_ID = agenteId;
+                    // ✅ Solo considera initialPrompt=true si no fue usado ya en esta sesión
+                    IS_INITIAL_PROMPT = initialPrompt === true && sessionStorage.getItem('initialPromptSent') !== 'true';
+
+                    // ✅ Guardamos configuración para usar en TalkingHead o en el UI
+                    CONFIG = {
+                        idioma: idioma || 'es',
+                        nombre: nombre || 'Docente',
+                        voz: voz || 'es-ES-Standard-A',
+                        avatar: avatar || 'brunette.glb',
+                        avatar_mood: avatar_mood || 'neutral',
+                        saludo: saludo || 'Hola, ¿en qué puedo ayudarte?',
+                        color_boton: color_boton || '#0078d7',
+                        logo: logo || '',
+                        tts_rate: tts_rate ?? 1.0,
+                        tts_pitch: tts_pitch ?? 0,
+                        tts_volume: tts_volume ?? 1.0
+                    };
+
+                    loadAvatar(); // ✅ Ya disponible porque está declarada fuera
+                    console.log("[Iframe] Iniciando TalkingHead...", CONFIG);
+                    head = new TalkingHead(nodeAvatar, {
+                        jwtGet,
+                        ttsEndpoint: googleTTSProxy,
+                        cameraZoomEnable: true,
+                        cameraPanEnable: true,
+                        cameraView: "upper",
+                        avatarMood: CONFIG.avatar_mood,
+                        lipsyncModules: ["es"],
+                        lipsyncLang: CONFIG.idioma,
+                        ttsVoice: CONFIG.voz,
+                        ttsRate: CONFIG.tts_rate,
+                        ttsPitch: CONFIG.tts_pitch,
+                        ttsVolume: CONFIG.tts_volume,
+                    });
+                    avatarName.innerText = CONFIG.nombre || 'Profe';
+
+                }
+
+                if (IS_INITIAL_PROMPT) {
+                    const defaultMessage = "Hola, ¿me ayudas a revisar si tengo actividades pendientes?";
+                    const textInput = document.getElementById('text');
+
+                    if (textInput) {
+                        textInput.value = defaultMessage;
+                        console.log("[Iframe] Enviando saludo automático:", defaultMessage);
+
+                        setTimeout(() => {
+                            if (typeof sendMessage === "function") {
+                                sendMessage();
+                            } else {
+                                console.warn("sendMessage no está disponible aún.");
+                            }
+                        }, 800);
+
+                    } else {
+                        console.warn("[Iframe] No se encontró el campo de texto.");
+                    }
+                }
+            });
+
+
 
 
             // Update progress bar
@@ -549,7 +606,7 @@
             }
 
             // Llama al avatar
-            await loadAvatar();
+            // await loadAvatar();
 
         });
 

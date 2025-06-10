@@ -3,14 +3,15 @@ const express = require('express');
 process.env.DEBUG = 'http-proxy-middleware:*';
 const jwt = require('jsonwebtoken');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const path = require('path');
+const cors = require('cors');
+const db = require('./db');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET;
 // const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
 const GOOGLE_TTS_KEY = process.env.GOOGLE_TTS_KEY;
-const path = require('path');
-const cors = require('cors');
 
 
 const ALLOWED_ORIGINS = process.env.ALLOWED_ORIGINS
@@ -50,10 +51,23 @@ app.use('/gtts', createProxyMiddleware({
   }
 }));
 
+// Ruta: Obtener agente por ID
+app.get('/api/agentes/:id', async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [rows] = await db.query('SELECT * FROM agentes WHERE id = ? AND activo = 1', [id]);
+    if (rows.length === 0) return res.status(404).json({ error: 'Agente no encontrado' });
+    res.json(rows[0]);
+  } catch (error) {
+    console.error('[Error DB]', error);
+    res.status(500).json({ error: 'Error al obtener el agente' });
+  }
+});
+
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Servidor iniciado en http://0.0.0.0:${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🟢 Servidor escuchando en http://localhost:${PORT}`);
 });
 

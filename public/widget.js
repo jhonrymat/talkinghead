@@ -1,4 +1,4 @@
-(function () {
+(async function () {
   const script = document.currentScript || document.querySelector('script[src*="widget.js"]');
   const scriptSrc = new URL(script.src);
 
@@ -9,12 +9,41 @@
   // ✅ Esto obtiene el dominio base del servidor del widget:
   const API_URL = scriptSrc.origin;
 
+  // 🔽 Nuevo: obtener configuración del agente
+  let configAgente = {
+    color_boton: "#1b9c85",
+    logo: "default.png",
+  };
+
+  async function obtenerConfiguracionAgente(id) {
+    if (!id) return {};
+    try {
+      const res = await fetch(`${API_URL}/api/agentes/${id}`);
+      if (res.ok) {
+        const data = await res.json();
+        console.log("[Widget] Configuración del agente cargada:", data);
+        return data;
+      } else {
+        console.warn("[Widget] Agente no encontrado.");
+        return {};
+      }
+    } catch (e) {
+      console.error("[Widget] Error al obtener el agente:", e);
+      return {};
+    }
+  }
+
+
   console.log("[Widget] userId:", userId);
   console.log("[Widget] courseId:", courseId);
   console.log("[Widget] initialPrompt:", initialPrompt);
   console.log("[Widget] agenteId:", agenteId);
 
-
+  // Asegurar logo válido
+  const logoPath = configAgente.logo
+    ? `/images/buttons/${configAgente.logo}`
+    : `/images/buttons/default.png`;
+  console.log("[Widget] Logo del agente:", logoPath);
   // Crear el botón flotante
   const btn = document.createElement("div");
   btn.id = "aulaViva-btn";
@@ -22,7 +51,7 @@
       position: fixed;
       bottom: 10px;
       right: 70px;
-      background: #0078d7;
+      background: ${configAgente.color_boton};
       border-radius: 50%;
       width: 56px;
       height: 56px;
@@ -34,10 +63,15 @@
       user-select: none;
       transition: transform 0.2s ease;
     `;
-  btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.38 1.4 4.5 3.53 5.88L6 21l4.12-2.24c.6.1 1.22.16 1.88.16 4.97 0 9-3.58 9-8s-4.03-8-9-8z"/></svg>`;
+  // Aplicar fondo al botón
+  btn.style.backgroundImage = `url(${API_URL}${logoPath})`;
+  btn.style.backgroundSize = "cover";
+  btn.style.backgroundPosition = "center";
+  btn.style.backgroundRepeat = "no-repeat";
+  // btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" fill="white" viewBox="0 0 24 24"><path d="M12 3C7.03 3 3 6.58 3 11c0 2.38 1.4 4.5 3.53 5.88L6 21l4.12-2.24c.6.1 1.22.16 1.88.16 4.97 0 9-3.58 9-8s-4.03-8-9-8z"/></svg>`;
   document.body.appendChild(btn);
 
-  // Crear el iframe oculto
+  // Crear el iframe oculto  
   const iframe = document.createElement("iframe");
   iframe.id = "aulaViva-frame";
   iframe.src = API_URL;
@@ -84,15 +118,30 @@
   btn.addEventListener("click", toggleChat);
 
   // ✅ Esperar que el iframe cargue para enviar el mensaje, sin abrirlo todavía
-  iframe.onload = () => {
-    console.log("[Widget] Iframe cargado. Enviando mensaje...");
+  iframe.onload = async () => {
+    console.log("[Widget] Iframe cargado. Obteniendo configuración del agente...");
+
+    configAgente = await obtenerConfiguracionAgente(agenteId);
+
     iframe.contentWindow.postMessage({
       userId,
       courseId,
       initialPrompt,
       agenteId,
+      idioma: configAgente.idioma,
+      nombre: configAgente.nombre,
+      voz: configAgente.tts_voz,
+      avatar: configAgente.avatar,
+      avatar_mood: configAgente.avatar_mood,
+      saludo: configAgente.saludo,
+      color_boton: configAgente.color_boton,
+      logo: configAgente.logo,
+      tts_rate: configAgente.tts_rate,
+      tts_pitch: configAgente.tts_pitch,
+      tts_volume: configAgente.tts_volume
     }, API_URL);
   };
+
 
   // Cierre externo opcional desde iframe
   window.addEventListener("message", (e) => {
