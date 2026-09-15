@@ -7,7 +7,7 @@ export const site = {
         ? "http://localhost:3000"
         : `${window.location.protocol}//${window.location.host}`,
   // websocket URL
-  API_WS: "https://ssn8nss.maddigo.com.co/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1",
+  API_WS: "https://webhook.maddigo.com.co/webhook/915d8e4c-1017-4dd1-b19d-a8b5001faaa1",
 
   // Preset avatars
   avatars: {
